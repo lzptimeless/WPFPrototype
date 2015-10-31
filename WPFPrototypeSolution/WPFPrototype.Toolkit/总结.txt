@@ -1,0 +1,7 @@
+﻿##焦点导航记录##
+
+1.父级的IInputElement.Focusable属性不会影响子元素是否能获得焦点
+2.FocusManager.IsFocusScope不会影响TabIndex的效果
+3.WPF自带Tab导航是递归模式：控件 ( > 子控件 ( > 子子控件 ) > 子控件 ) > 控件 > 控件
+*4.TextBox无法使用Up，Down，Left，Right导航，重写OnKeyDown也不行，因为OnKeyDown根本不会触发
+*5.WPF方向导航直线距离越近优先级越高，这就导致很多时候导航不是期望的样子

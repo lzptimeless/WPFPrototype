@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<languages>
+  <text key="app_name">WPF Prototype</text>
+  <text key="developer">Ling Zhongping</text>
+  <text key="publisher">Code Works</text>
+  <text key="hello">Hello {0}, Welcome to {1}</text>
+  <text key="head1">Head 1</text>
+  <text key="head2">Head 2</text>
+  <text key="head3">Head 3</text>
+  <text key="head4" ref="Head2">Head 4</text>
+</languages>

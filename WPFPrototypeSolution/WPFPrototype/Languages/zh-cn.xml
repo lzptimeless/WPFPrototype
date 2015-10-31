@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<languages>
+  <text key="app_name">wpf原型</text>
+  <text key="developer">凌仲平</text>
+  <text key="publisher">代码工厂</text>
+  <text key="hello">欢迎{0},来到{1}</text>
+  <text key="head1">标题 1</text>
+  <text key="head2">标题 2</text>
+  <text key="head3">标题 3</text>
+  <text key="head4" ref="head3">标题 4</text>
+</languages>
