@@ -24,9 +24,11 @@ namespace WPFPrototype.Toolkit.Controls
 
         public TKTextBlock()
         {
-            this.Loaded += Label_Loaded;
-            LanguageHelper.Resources.LanguageChangedEvent += Resources_LanguageChangedEvent;
+            this.Loaded += TKTextBlock_Loaded;
+            this.Unloaded += TKTextBlock_Unloaded;
         }
+
+        
         #endregion
 
         #region properties
@@ -385,7 +387,7 @@ namespace WPFPrototype.Toolkit.Controls
         #endregion
 
         #region event handlers
-        void Resources_LanguageChangedEvent(object sender, EventArgs e)
+        void Resources_LanguageChanged(object sender, EventArgs e)
         {
             this.Dispatcher.InvokeAsync(() =>
             {
@@ -413,9 +415,15 @@ namespace WPFPrototype.Toolkit.Controls
             });
         }
 
-        void Label_Loaded(object sender, RoutedEventArgs e)
+        private void TKTextBlock_Loaded(object sender, RoutedEventArgs e)
         {
             this.RefreshText();
+            LanguageHelper.Resources.AddWeakLanguageChangedHandler(Resources_LanguageChanged);
+        }
+
+        private void TKTextBlock_Unloaded(object sender, RoutedEventArgs e)
+        {
+            LanguageHelper.Resources.RemoveWeakLanguageChangedHandler(Resources_LanguageChanged);
         }
         #endregion
 

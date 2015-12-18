@@ -30,9 +30,9 @@ namespace WPFPrototype.Toolkit.Gifs
         /// </summary>
         private BitmapDecoder _decoder;
         /// <summary>
-        /// Gif帧
+        /// Gif帧信息缓存，主要是为了节省解析这些信息的cpu消耗
         /// </summary>
-        private List<GifFrame> _frames;
+        private GifFrame[] _frames;
         /// <summary>
         /// 切换帧计时器
         /// </summary>
@@ -62,20 +62,35 @@ namespace WPFPrototype.Toolkit.Gifs
         }
         #endregion
 
-        #region event
-        #region ImageSourceChangedEvent
+        #region events
+        #region ImageSourceChanged
         /// <summary>
-        /// ImageSource改变事件
+        /// Event name of <see cref="ImageSourceChanged"/>
         /// </summary>
-        public event EventHandler ImageSourceChangedEvent;
+        public const string ImageSourceChangedEventName = "ImageSourceChanged";
 
-        private void NotifyImageSourceChangedEvent()
+        public event EventHandler<EventArgs> ImageSourceChanged;
+
+        private void OnImageSourceChanged()
         {
+            EventHandler<EventArgs> handler;
+
             lock (this)
             {
-                var handler = this.ImageSourceChangedEvent;
-                if (handler != null) handler(this, EventArgs.Empty);
+                handler = this.ImageSourceChanged;
             }
+
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public void AddWeakImageSourceChangedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<GifPlayer, EventArgs>.AddHandler(this, ImageSourceChangedEventName, handler);
+        }
+
+        public void RemoveWeakImageSourceChangedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<GifPlayer, EventArgs>.RemoveHandler(this, ImageSourceChangedEventName, handler);
         }
         #endregion
         #endregion
@@ -101,14 +116,12 @@ namespace WPFPrototype.Toolkit.Gifs
                 this._decoder = null;
             }
 
-            // 解码
-            List<GifFrame> gifFrames = this._frames = new List<GifFrame>();
-            MemoryStream gifStream = null;
-            int pixelWidth = 0, pixelHeight = 0;
-            await Task.Run(() =>
+            MemoryStream gifStream = new MemoryStream(); // gif流缓存
+            this._gifStream = gifStream;
+            // 加载gif流，读取硬盘可能比较慢，这里用异步操作
+            try
             {
-                gifStream = new MemoryStream();
-                try
+                await Task.Run(() =>
                 {
                     using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
@@ -116,41 +129,33 @@ namespace WPFPrototype.Toolkit.Gifs
                         fs.CopyTo(gifStream);
                         gifStream.Seek(0, SeekOrigin.Begin);
                     }
+                });
+            }
+            catch
+            {
+                gifStream.Dispose();
+                throw;
+            }// catch
 
-                    var decoder = BitmapDecoder.Create(gifStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
-                    var logscrdesc = decoder.Metadata.GetQuery("/logscrdesc") as BitmapMetadata;
-                    pixelWidth = (ushort)logscrdesc.GetQuery("/width");
-                    pixelHeight = (ushort)logscrdesc.GetQuery("/height");
-
-                    // 解析帧
-                    foreach (var bitmapFrame in decoder.Frames)
-                    {
-                        // 这句冗余的代码可以尽早的发现，当前操作是否被覆盖
-                        if (!object.ReferenceEquals(gifFrames, this._frames)) break;
-
-                        gifFrames.Add(CreateGifFrame(bitmapFrame));
-                    }
-                }
-                catch
-                {
-                    gifStream.Dispose();
-                    throw;
-                }
-            });
-            // 如果当前操作被覆盖了则放弃
-            if (!object.ReferenceEquals(gifFrames, this._frames))
+            // 如果当前操作被覆盖了则直接退出
+            if (!object.ReferenceEquals(gifStream, this._gifStream))
             {
                 gifStream.Dispose();
                 return;
             }
-
-            // 保存解析器
-            this._gifStream = gifStream;
-            this._decoder = BitmapDecoder.Create(gifStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
-
+            
+            // 初始化gif解码器
+            var decoder = BitmapDecoder.Create(gifStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
+            this._decoder = decoder;
+            // 解析gif基础信息
+            var logscrdesc = decoder.Metadata.GetQuery("/logscrdesc") as BitmapMetadata;
+            int pixelWidth = (ushort)logscrdesc.GetQuery("/width");
+            int pixelHeight = (ushort)logscrdesc.GetQuery("/height");
+            // 初始化gif帧信息缓存
+            this._frames = new GifFrame[decoder.Frames.Count];
             // 创建图像源
             var bitmap = this._bitmap = new WriteableBitmap(pixelWidth, pixelHeight, 96, 96, PixelFormats.Bgra32, null);
-            this.NotifyImageSourceChangedEvent();
+            this.OnImageSourceChanged();
 
             // 准备好下一帧
             this._nextIndex = 0;
@@ -187,6 +192,7 @@ namespace WPFPrototype.Toolkit.Gifs
             if (this._timer != null)
             {
                 this._timer.Stop();
+                // 渲染画面到第0帧
                 this._nextIndex = 0;
                 this.RenderNextFrame();
             }
@@ -207,7 +213,7 @@ namespace WPFPrototype.Toolkit.Gifs
         private void TimerCallback(object sender, EventArgs e)
         {
             var timer = this._timer;
-            // 为了防止被动画停止了以后再次渲染，所以通过timer对象来确定是否停止
+            // 为了防止gif更新了之后，老的timer再次被渲染，所以发现timer作废后停止
             if (!object.ReferenceEquals(timer, sender)) return;
 
             timer.Stop();
@@ -215,12 +221,13 @@ namespace WPFPrototype.Toolkit.Gifs
 
             // 开始下一帧计时
             int index = ++this._nextIndex;
-            if (this._frames.Count <= index)
+            if (this._frames.Length <= index)
             {
                 index = this._nextIndex = 0;
             }
 
-            timer.Interval = TimeSpan.FromMilliseconds(this._frames[index].Delay / this._speed);
+            var gifFrame = this.GetOrCreateGifFrame(index);
+            timer.Interval = TimeSpan.FromMilliseconds(gifFrame.Delay / this._speed);
             timer.Start();
         }
 
@@ -230,9 +237,10 @@ namespace WPFPrototype.Toolkit.Gifs
         private void RenderNextFrame()
         {
             // 由于gif最大是256色，而且使用的是调色板模式，像素大小为1byte，里面存的都是颜色索引，所以以下算法都是基于这个前提编写的
+            int frameIndex = this._nextIndex;
             var bitmap = this._bitmap;
-            var frame = this._frames[this._nextIndex];
-            var bitmapFrame = this._decoder.Frames[this._nextIndex];
+            var bitmapFrame = this._decoder.Frames[frameIndex];
+            var frame = this.GetOrCreateGifFrame(frameIndex);
             int bitmapStride = bitmap.BackBufferStride;
             int frameTop = frame.Top;
             int frameLeft = frame.Left;
@@ -284,6 +292,25 @@ namespace WPFPrototype.Toolkit.Gifs
             bitmap.AddDirtyRect(rect);
             // 解除BackBuffer锁定
             bitmap.Unlock();
+        }
+
+        /// <summary>
+        /// 获取或者创建<see cref="GifFrame"/>
+        /// </summary>
+        /// <param name="index">帧索引</param>
+        private GifFrame GetOrCreateGifFrame(int index)
+        {
+            var frame = this._frames[index];
+
+            // 如果没有解析过这一帧则解析它，并缓存下来
+            if (frame == null)
+            {
+                var bitmapFrame = this._decoder.Frames[index];
+                frame = CreateGifFrame(bitmapFrame);
+                this._frames[index] = frame;
+            }// if
+
+            return frame;
         }
 
         private static GifFrame CreateGifFrame(BitmapFrame frame)

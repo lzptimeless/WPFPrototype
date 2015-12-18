@@ -12,6 +12,7 @@ namespace WPFPrototype.Toolkit.Languages
     /// </summary>
     public interface ILanguageResources
     {
+        #region properties
         /// <summary>
         /// 获取资源文件路径
         /// </summary>
@@ -28,7 +29,30 @@ namespace WPFPrototype.Toolkit.Languages
         /// <param name="key">多语言键值</param>
         /// <returns></returns>
         string this[string key] { get; }
+        #endregion
 
+        #region events
+        #region LanguageChanged
+        /// <summary>
+        /// 语言改变事件
+        /// </summary>
+        event EventHandler<EventArgs> LanguageChanged;
+
+        /// <summary>
+        /// 添加多语言改变事件Handler
+        /// </summary>
+        /// <param name="handler">handler</param>
+        void AddWeakLanguageChangedHandler(EventHandler<EventArgs> handler);
+
+        /// <summary>
+        /// 移除多语言改变事件Handler
+        /// </summary>
+        /// <param name="handler">handler</param>
+        void RemoveWeakLanguageChangedHandler(EventHandler<EventArgs> handler);
+        #endregion
+        #endregion
+
+        #region methods
         /// <summary>
         /// 检查默认路径下的资源是否支持这个语言，只要找到相近的语言都算作支持
         /// </summary>
@@ -60,10 +84,6 @@ namespace WPFPrototype.Toolkit.Languages
         /// </summary>
         /// <param name="ietfLanguageTag">ietf language tag表示的语言，用来查找默认路径下多语言资源文件</param>
         void SetLanguage(string ietfLanguageTag);
-
-        /// <summary>
-        /// 语言改变事件
-        /// </summary>
-        event EventHandler LanguageChangedEvent;
+        #endregion
     }
 }

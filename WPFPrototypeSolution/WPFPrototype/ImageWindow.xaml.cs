@@ -28,10 +28,10 @@ namespace WPFPrototype
             InitializeComponent();
 
             this._gifPlayer = new GifPlayer();
-            this._gifPlayer.ImageSourceChangedEvent += _gifPlayer_ImageSourceChangedEvent;
+            this._gifPlayer.AddWeakImageSourceChangedHandler(_gifPlayer_ImageSourceChanged);
         }
 
-        void _gifPlayer_ImageSourceChangedEvent(object sender, EventArgs e)
+        void _gifPlayer_ImageSourceChanged(object sender, EventArgs e)
         {
             this.ImageHost.Source = this._gifPlayer.ImageSource;
         }
@@ -82,6 +82,11 @@ namespace WPFPrototype
             {
                 ToolHost.Visibility = ToolHost.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
             }
+        }
+
+        private void GCButton_Click(object sender, RoutedEventArgs e)
+        {
+            GC.Collect();
         }
     }
 }

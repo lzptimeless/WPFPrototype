@@ -23,8 +23,8 @@ namespace WPFPrototype.Toolkit.Controls
 
         public TKRun()
         {
-            this.Loaded += TextRun_Loaded;
-            LanguageHelper.Resources.LanguageChangedEvent += Resources_LanguageChangedEvent;
+            this.Loaded += TKRun_Loaded;
+            this.Unloaded += TKRun_Unloaded;
         }
         #endregion
 
@@ -387,7 +387,7 @@ namespace WPFPrototype.Toolkit.Controls
         #endregion
 
         #region event handlers
-        void Resources_LanguageChangedEvent(object sender, EventArgs e)
+        void Resources_LanguageChanged(object sender, EventArgs e)
         {
             this.Dispatcher.InvokeAsync(() =>
             {
@@ -415,9 +415,15 @@ namespace WPFPrototype.Toolkit.Controls
             });
         }
 
-        void TextRun_Loaded(object sender, RoutedEventArgs e)
+        private void TKRun_Loaded(object sender, RoutedEventArgs e)
         {
             this.RefreshText();
+            LanguageHelper.Resources.AddWeakLanguageChangedHandler(Resources_LanguageChanged);
+        }
+
+        private void TKRun_Unloaded(object sender, RoutedEventArgs e)
+        {
+            LanguageHelper.Resources.RemoveWeakLanguageChangedHandler(Resources_LanguageChanged);
         }
         #endregion
 

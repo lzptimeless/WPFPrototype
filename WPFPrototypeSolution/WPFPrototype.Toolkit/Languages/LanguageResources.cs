@@ -122,16 +122,34 @@ namespace WPFPrototype.Toolkit.Languages
         #endregion
 
         #region events
-        #region CultureChangeEvent
-        public event EventHandler LanguageChangedEvent;
+        #region LanguageChanged
+        /// <summary>
+        /// Event name of <see cref="LanguageChanged"/>
+        /// </summary>
+        public const string LanguageChangedEventName = "LanguageChanged";
 
-        protected virtual void NotifyLanguageChangedEvent()
+        public event EventHandler<EventArgs> LanguageChanged;
+
+        private void OnLanguageChanged()
         {
+            EventHandler<EventArgs> handler;
+
             lock (this)
             {
-                var handler = this.LanguageChangedEvent;
-                if (handler != null) handler(this, EventArgs.Empty);
+                handler = this.LanguageChanged;
             }
+
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public void AddWeakLanguageChangedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<LanguageResources, EventArgs>.AddHandler(this, LanguageChangedEventName, handler);
+        }
+
+        public void RemoveWeakLanguageChangedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<LanguageResources, EventArgs>.RemoveHandler(this, LanguageChangedEventName, handler);
         }
         #endregion
         #endregion
@@ -190,7 +208,7 @@ namespace WPFPrototype.Toolkit.Languages
             this.LoadResources(content);
             this._resourcePath = sourcePath;
             this._language = ietfLanguageTag;
-            NotifyLanguageChangedEvent();
+            OnLanguageChanged();
         }
         #endregion
 

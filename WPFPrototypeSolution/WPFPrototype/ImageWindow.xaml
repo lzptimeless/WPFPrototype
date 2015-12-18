@@ -24,6 +24,7 @@
                     <TextBox x:Name="Speed" Width="80"></TextBox>
                     <Button x:Name="SetSpeed" Click="SetSpeed_Click">Set Speed</Button>
                 </StackPanel>
+                <Button x:Name="GCButton" Click="GCButton_Click">GC</Button>
             </StackPanel>
             <ListBox Grid.Row="1" x:Name="Images"
                      SelectionChanged="Images_SelectionChanged"></ListBox>
