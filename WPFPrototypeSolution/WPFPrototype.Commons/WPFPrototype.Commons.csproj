@@ -52,10 +52,11 @@
     <Compile Include="Downloads\IProtocalProvider.cs" />
     <Compile Include="Downloads\ISegmentCalculator.cs" />
     <Compile Include="Downloads\LocalFileInfo.cs" />
+    <Compile Include="Downloads\LocalFileWriter.cs" />
     <Compile Include="Downloads\LocalSegment.cs" />
     <Compile Include="Downloads\MinSizeSegmentCalculator.cs" />
     <Compile Include="Downloads\RemoteFileInfo.cs" />
-    <Compile Include="Downloads\Segment.cs" />
+    <Compile Include="Downloads\SegmentThread.cs" />
     <Compile Include="Downloads\SequentialMirrorSelector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

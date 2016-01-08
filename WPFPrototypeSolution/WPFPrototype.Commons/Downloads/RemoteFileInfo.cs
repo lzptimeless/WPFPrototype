@@ -7,13 +7,16 @@ using System.Xml.Linq;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 下载文件信息
+    /// </summary>
     public class RemoteFileInfo
     {
         #region properties
         #region MimeType
         private string _mimeType;
         /// <summary>
-        /// Get or set <see cref="MimeType"/>
+        /// Get or set <see cref="MimeType"/>，文件类型
         /// </summary>
         public string MimeType
         {
@@ -25,7 +28,7 @@ namespace WPFPrototype.Commons.Downloads
         #region IsAcceptRange
         private bool _isAcceptRange;
         /// <summary>
-        /// Get or set <see cref="IsAcceptRange"/>
+        /// Get or set <see cref="IsAcceptRange"/>，是否支持分片
         /// </summary>
         public bool IsAcceptRange
         {
@@ -37,7 +40,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Size
         private long _size;
         /// <summary>
-        /// Get or set <see cref="Size"/>
+        /// Get or set <see cref="Size"/>，大小
         /// </summary>
         public long Size
         {
@@ -49,7 +52,7 @@ namespace WPFPrototype.Commons.Downloads
         #region ModifyTime
         private DateTime _modifyTime;
         /// <summary>
-        /// Get or set <see cref="ModifyTime"/>
+        /// Get or set <see cref="ModifyTime"/>，最后修改时间
         /// </summary>
         public DateTime ModifyTime
         {
@@ -72,6 +75,12 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region public methods
+        /// <summary>
+        /// 判断两个文件是否一样，优先用md5比较，如果没有md5则比较类型，大小
+        /// </summary>
+        /// <param name="left"></param>
+        /// <param name="right"></param>
+        /// <returns></returns>
         public static bool IsSameFile(RemoteFileInfo left, RemoteFileInfo right)
         {
             if ((!string.IsNullOrEmpty(left._md5)) &&
@@ -82,8 +91,7 @@ namespace WPFPrototype.Commons.Downloads
             }
 
             if (left._mimeType == right._mimeType &&
-                left._size == right._size &&
-                left._modifyTime == right._modifyTime)
+                left._size == right._size)
             {
                 return true;
             }
@@ -91,6 +99,11 @@ namespace WPFPrototype.Commons.Downloads
             return false;
         }
 
+        /// <summary>
+        /// 通过序列化xml节点创建<see cref="RemoteFileInfo"/>
+        /// </summary>
+        /// <param name="element">序列化xml节点</param>
+        /// <returns></returns>
         public static RemoteFileInfo CreateFromXElement(XElement element)
         {
             RemoteFileInfo remoteInfo = new RemoteFileInfo();
@@ -122,6 +135,10 @@ namespace WPFPrototype.Commons.Downloads
             return remoteInfo;
         }
 
+        /// <summary>
+        /// 序列化为xml节点
+        /// </summary>
+        /// <returns></returns>
         public XElement ToXElement()
         {
             var element = new XElement("RemoteFileInfo",

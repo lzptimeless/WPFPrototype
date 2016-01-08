@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 通过数据源计算出来的片段
+    /// </summary>
     public class CalculatedSegment
     {
         #region constructors

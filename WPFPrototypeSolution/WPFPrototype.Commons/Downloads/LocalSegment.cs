@@ -7,13 +7,16 @@ using System.Xml.Linq;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 本地文件片段
+    /// </summary>
     public class LocalSegment
     {
         #region properties
         #region Index
         private int _index;
         /// <summary>
-        /// Get or set <see cref="Index"/>
+        /// Get or set <see cref="Index"/>，片段索引
         /// </summary>
         public int Index
         {
@@ -25,7 +28,7 @@ namespace WPFPrototype.Commons.Downloads
         #region StartPosition
         private long _startPosition;
         /// <summary>
-        /// Get or set <see cref="StartPosition"/>
+        /// Get or set <see cref="StartPosition"/>，片段起始位置
         /// </summary>
         public long StartPosition
         {
@@ -37,7 +40,7 @@ namespace WPFPrototype.Commons.Downloads
         #region EndPosition
         private long _endPosition;
         /// <summary>
-        /// Get or set <see cref="EndPosition"/>
+        /// Get or set <see cref="EndPosition"/>，片断结束位置
         /// </summary>
         public long EndPosition
         {
@@ -49,7 +52,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Position
         private long _position;
         /// <summary>
-        /// Get or set <see cref="Position"/>
+        /// Get or set <see cref="Position"/>，片段写入指针的位置
         /// </summary>
         public long Position
         {
@@ -60,6 +63,11 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region public methods
+        /// <summary>
+        /// 通过序列化数据创建<see cref="LocalSegment"/>
+        /// </summary>
+        /// <param name="element">序列化Xml节点</param>
+        /// <returns></returns>
         public static LocalSegment CreateFromXElement(XElement element)
         {
             LocalSegment localSg = new LocalSegment();
@@ -88,6 +96,10 @@ namespace WPFPrototype.Commons.Downloads
             return localSg;
         }
 
+        /// <summary>
+        /// 序列化为Xml节点
+        /// </summary>
+        /// <returns></returns>
         public XElement ToXElement()
         {
             XElement element = new XElement("LocalSegment",

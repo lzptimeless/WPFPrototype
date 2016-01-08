@@ -4,7 +4,8 @@
         Title="Gif Viewer" 
         Height="400" 
         Width="600"
-        KeyUp="Window_KeyUp">
+        KeyUp="Window_KeyUp"
+        Unloaded="Window_Unloaded">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>

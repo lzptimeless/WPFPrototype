@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="Commons\View.cs" />
     <Compile Include="Controls\ComboBox\TKComboBoxItem.cs" />
+    <Compile Include="Controls\Image\TKImage.cs" />
     <Compile Include="Controls\List\TKList.cs" />
     <Compile Include="Controls\List\TKListItem.cs" />
     <Compile Include="Controls\ComboBox\TKComboBox.cs" />

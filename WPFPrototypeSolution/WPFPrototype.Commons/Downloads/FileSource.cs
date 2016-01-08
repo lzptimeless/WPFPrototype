@@ -7,17 +7,30 @@ using System.Xml.Linq;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 文件源信息
+    /// </summary>
     public class FileSource
     {
         #region constructors
         public FileSource()
         { }
 
+        /// <summary>
+        /// 创建<see cref="FileSource"/>
+        /// </summary>
+        /// <param name="url">下载地址</param>
         public FileSource(string url)
         {
             this._url = url;
         }
 
+        /// <summary>
+        /// 创建<see cref="FileSource"/>
+        /// </summary>
+        /// <param name="url">下载地址</param>
+        /// <param name="account">域账号</param>
+        /// <param name="password">域密码</param>
         public FileSource(string url, string account, string password)
         {
             this._url = url;
@@ -31,7 +44,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Url
         private string _url;
         /// <summary>
-        /// Get or set <see cref="Url"/>
+        /// Get or set <see cref="Url"/>，下载地址
         /// </summary>
         public string Url
         {
@@ -43,7 +56,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Account
         private string _account;
         /// <summary>
-        /// Get or set <see cref="Account"/>
+        /// Get or set <see cref="Account"/>，域账号
         /// </summary>
         public string Account
         {
@@ -55,7 +68,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Password
         private string _password;
         /// <summary>
-        /// Get or set <see cref="Password"/>
+        /// Get or set <see cref="Password"/>，域密码
         /// </summary>
         public string Password
         {
@@ -67,7 +80,7 @@ namespace WPFPrototype.Commons.Downloads
         #region IsNeedAuthentication
         private bool _isNeedAuthentication;
         /// <summary>
-        /// Get or set <see cref="IsNeedAuthentication"/>
+        /// Get or set <see cref="IsNeedAuthentication"/>，是否需要域账号验证
         /// </summary>
         public bool IsNeedAuthentication
         {
@@ -78,6 +91,11 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region public methods
+        /// <summary>
+        /// 通过序列化数据创建<see cref="FileSource"/>
+        /// </summary>
+        /// <param name="element">序列化Xml数据节点</param>
+        /// <returns></returns>
         public static FileSource CreateFromXElement(XElement element)
         {
             FileSource fileSrc = new FileSource();
@@ -106,6 +124,10 @@ namespace WPFPrototype.Commons.Downloads
             return fileSrc;
         }
 
+        /// <summary>
+        /// 序列化为Xml节点
+        /// </summary>
+        /// <returns></returns>
         public XElement ToXElement()
         {
             var element = new XElement("FileSource",

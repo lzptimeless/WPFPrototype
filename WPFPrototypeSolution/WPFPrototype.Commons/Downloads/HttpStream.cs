@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 用来包裹Http下载协议的HttpClient,HttpRequestMessage,HttpResponseMessage,Stream
+    /// 方便统一释放资源
+    /// </summary>
     internal class HttpStream : Stream
     {
         #region fields
@@ -18,6 +22,13 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region constructors
+        /// <summary>
+        /// 创建<see cref="HttpStream"/>
+        /// </summary>
+        /// <param name="stream">下载流</param>
+        /// <param name="client">HttpClient</param>
+        /// <param name="request">HttpRequestMessage</param>
+        /// <param name="response">HttpResponseMessage</param>
         public HttpStream(Stream stream, HttpClient client, HttpRequestMessage request, HttpResponseMessage response)
         {
             this._stream = stream;
@@ -104,6 +115,7 @@ namespace WPFPrototype.Commons.Downloads
 
         protected override void Dispose(bool disposing)
         {
+            // 统一释放http下载相关资源
             this._stream.Dispose();
             this._response.Dispose();
             this._request.Dispose();

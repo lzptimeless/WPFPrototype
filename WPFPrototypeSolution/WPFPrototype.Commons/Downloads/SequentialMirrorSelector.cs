@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 按先后顺序依次选择镜像，原始数据源优先
+    /// </summary>
     public class SequentialMirrorSelector : IMirrorSelector
     {
         #region fields

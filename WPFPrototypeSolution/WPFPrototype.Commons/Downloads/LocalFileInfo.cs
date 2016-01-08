@@ -8,13 +8,16 @@ using System.Xml.Linq;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 本地下载配置文件
+    /// </summary>
     public class LocalFileInfo
     {
         #region properties
         #region Source
         private FileSource _source;
         /// <summary>
-        /// Get or set <see cref="Source"/>
+        /// Get or set <see cref="Source"/>，原始下载源
         /// </summary>
         public FileSource Source
         {
@@ -26,7 +29,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Mirrors
         private List<FileSource> _mirrors;
         /// <summary>
-        /// Get or set <see cref="Mirrors"/>
+        /// Get or set <see cref="Mirrors"/>，下载镜像数组
         /// </summary>
         public List<FileSource> Mirrors
         {
@@ -38,7 +41,7 @@ namespace WPFPrototype.Commons.Downloads
         #region SavePath
         private string _savePath;
         /// <summary>
-        /// Get or set <see cref="SavePath"/>
+        /// Get or set <see cref="SavePath"/>，下载文件保存路径
         /// </summary>
         public string SavePath
         {
@@ -50,7 +53,7 @@ namespace WPFPrototype.Commons.Downloads
         #region RemoteInfo
         private RemoteFileInfo _remoteInfo;
         /// <summary>
-        /// Get or set <see cref="RemoteInfo"/>
+        /// Get or set <see cref="RemoteInfo"/>，下载文件信息
         /// </summary>
         public RemoteFileInfo RemoteInfo
         {
@@ -62,7 +65,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Segments
         private List<LocalSegment> _segments;
         /// <summary>
-        /// Get or set <see cref="Segments"/>
+        /// Get or set <see cref="Segments"/>，文件片段数组
         /// </summary>
         public List<LocalSegment> Segments
         {
@@ -74,7 +77,7 @@ namespace WPFPrototype.Commons.Downloads
         #region CreateTime
         private DateTime _createTime;
         /// <summary>
-        /// Get or set <see cref="CreateTime"/>
+        /// Get or set <see cref="CreateTime"/>，本地文件创建时间
         /// </summary>
         public DateTime CreateTime
         {
@@ -85,7 +88,7 @@ namespace WPFPrototype.Commons.Downloads
 
         #region HasSegment
         /// <summary>
-        /// Get or set <see cref="HasSegment"/>
+        /// Get or set <see cref="HasSegment"/>，本地文件是否分片
         /// </summary>
         public bool HasSegment
         {
@@ -95,6 +98,11 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region public methods
+        /// <summary>
+        /// 通过配置文件创建<see cref="LocalFileInfo"/>
+        /// </summary>
+        /// <param name="path">配置文件路径</param>
+        /// <returns></returns>
         public static LocalFileInfo Load(string path)
         {
             XDocument xml = XDocument.Load(path);
@@ -154,6 +162,10 @@ namespace WPFPrototype.Commons.Downloads
             return fileInfo;
         }
 
+        /// <summary>
+        /// 保存配置文件
+        /// </summary>
+        /// <param name="path">保存路径</param>
         public void Save(string path)
         {
             XDocument xml = new XDocument(new XElement("LocalFileInfo"));

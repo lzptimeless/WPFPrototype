@@ -69,11 +69,20 @@ namespace WPFPrototype
             }
         }
 
-        private void Images_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void Images_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var path = this.Images.SelectedValue as string;
             if (!string.IsNullOrEmpty(path))
-                this._gifPlayer.Play(path);
+            {
+                try
+                {
+                    await this._gifPlayer.Play(path);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(string.Format("播放gif失败\r\n{0}", ex));
+                }
+            }// if
         }
 
         private void Window_KeyUp(object sender, KeyEventArgs e)
@@ -87,6 +96,11 @@ namespace WPFPrototype
         private void GCButton_Click(object sender, RoutedEventArgs e)
         {
             GC.Collect();
+        }
+
+        private void Window_Unloaded(object sender, RoutedEventArgs e)
+        {
+            this._gifPlayer.Dispose();
         }
     }
 }

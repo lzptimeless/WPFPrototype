@@ -14,7 +14,7 @@ namespace WPFPrototype.Toolkit.Gifs
     /// <summary>
     /// Gif播放器
     /// </summary>
-    public class GifPlayer
+    public class GifPlayer : IDisposable
     {
         #region fields
         /// <summary>
@@ -100,7 +100,7 @@ namespace WPFPrototype.Toolkit.Gifs
         /// 播放Gif
         /// </summary>
         /// <param name="filePath">Gif文件路径</param>
-        public async void Play(string filePath)
+        public async Task Play(string filePath)
         {
             // 终止当前动画，释放资源
             if (this._timer != null)
@@ -143,7 +143,7 @@ namespace WPFPrototype.Toolkit.Gifs
                 gifStream.Dispose();
                 return;
             }
-            
+
             // 初始化gif解码器
             var decoder = BitmapDecoder.Create(gifStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
             this._decoder = decoder;
@@ -195,6 +195,28 @@ namespace WPFPrototype.Toolkit.Gifs
                 // 渲染画面到第0帧
                 this._nextIndex = 0;
                 this.RenderNextFrame();
+            }
+        }
+
+        /// <summary>
+        /// 释放gif缓存，计时器
+        /// </summary>
+        public void Dispose()
+        {
+            if (this._timer != null)
+            {
+                this._timer.Stop();
+                this._timer = null;
+                this._frames = null;
+                if (this._gifStream != null)
+                {
+                    this._gifStream.Dispose();
+                    this._gifStream = null;
+                }
+                this._decoder = null;
+
+                this._bitmap = null;
+                this.OnImageSourceChanged();
             }
         }
 
@@ -313,21 +335,26 @@ namespace WPFPrototype.Toolkit.Gifs
             return frame;
         }
 
+        /// <summary>
+        /// 创建<see cref="GifFrame"/>
+        /// </summary>
+        /// <param name="frame">Gif解码的帧</param>
+        /// <returns></returns>
         private static GifFrame CreateGifFrame(BitmapFrame frame)
         {
             GifFrame gifFrame = new GifFrame();
 
             var metadata = frame.Metadata as BitmapMetadata;
-            var imgDesc = metadata.GetQuery("/imgdesc") as BitmapMetadata;
-            gifFrame.Top = (ushort)imgDesc.GetQuery("/top");
-            gifFrame.Left = (ushort)imgDesc.GetQuery("/left");
+            var imgDesc = metadata.GetQuery("/imgdesc") as BitmapMetadata;// 帧描述
+            gifFrame.Top = (ushort)imgDesc.GetQuery("/top"); // 当前帧在画布中的top坐标
+            gifFrame.Left = (ushort)imgDesc.GetQuery("/left");// 当前帧在画布中的left坐标
             var grctlext = metadata.GetQuery("/grctlext") as BitmapMetadata;
-            int delay = (ushort)grctlext.GetQuery("/delay") * 10;
-            gifFrame.Delay = delay > 10 ? delay : 100;
-            bool transparencyFlag = (bool)grctlext.GetQuery("/TransparencyFlag");
-            gifFrame.PixelWidth = frame.PixelWidth;
-            gifFrame.PixelHeight = frame.PixelHeight;
-            // 导出颜色
+            int delay = (ushort)grctlext.GetQuery("/delay") * 10;// 当前帧相对于前一帧的播放延迟时间，单位/10 ms
+            gifFrame.Delay = delay > 10 ? delay : 100; // 有可能遇到"/delay"为1的情况，貌似这种情况默认为100 ms
+            bool transparencyFlag = (bool)grctlext.GetQuery("/TransparencyFlag");// 当前帧是否支持透明色
+            gifFrame.PixelWidth = frame.PixelWidth;// 当前帧宽度px
+            gifFrame.PixelHeight = frame.PixelHeight;// 当前帧高度px
+            // 当调色板中的颜色导出成int型的数组，为渲染操作节省运算量
             gifFrame.Colors = new int[frame.Palette.Colors.Count];
             int i = 0, color = 0;
             foreach (var item in frame.Palette.Colors)

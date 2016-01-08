@@ -9,6 +9,11 @@ namespace WPFPrototype.Commons.Downloads
 {
     public static class DownloadHelper
     {
+        /// <summary>
+        /// 通过下载url分析文件名，失败返回GUID.unkown文件名
+        /// </summary>
+        /// <param name="url">下载url</param>
+        /// <returns></returns>
         public static string GetFileNameFromUrl(string url)
         {
             string defaultName = Guid.NewGuid().ToString("N") + ".unkown";
@@ -16,6 +21,12 @@ namespace WPFPrototype.Commons.Downloads
             return GetFileNameFromUrl(url, defaultName);
         }
 
+        /// <summary>
+        /// 通过下载url分析文件名
+        /// </summary>
+        /// <param name="url">下载url</param>
+        /// <param name="defaultName">默认文件名，分析失败时返回</param>
+        /// <returns></returns>
         public static string GetFileNameFromUrl(string url, string defaultName)
         {
             if (string.IsNullOrEmpty(url)) return defaultName;

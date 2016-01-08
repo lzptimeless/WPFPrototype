@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace WPFPrototype.Commons.Downloads
 {
+    /// <summary>
+    /// 平均分片，但不小于最小值
+    /// </summary>
     public class MinSizeSegmentCalculator : ISegmentCalculator
     {
         #region constructors
@@ -52,7 +55,7 @@ namespace WPFPrototype.Commons.Downloads
             do
             {
                 currentSegmentSize = Math.Min(segmentSize, remainSize);
-                segments.Add(new CalculatedSegment(offset, offset + currentSegmentSize));
+                segments.Add(new CalculatedSegment(offset, offset + currentSegmentSize - 1));
 
                 remainSize -= currentSegmentSize;
                 offset += currentSegmentSize;
