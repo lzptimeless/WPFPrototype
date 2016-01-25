@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace WPFPrototype.Commons.Downloads
 {
     /// <summary>
-    /// 片段下载线程
+    /// 自动获取镜像，并循环获取需要下载的片段，下载片段
     /// </summary>
     public class SegmentThread
     {
@@ -19,15 +19,11 @@ namespace WPFPrototype.Commons.Downloads
         private LocalFileWriter _writer;
         private IProtocalProvider _protocalProvider;
         private FileSource _source;
-        private bool _isStop;
         #endregion
 
         #region constructors
         public SegmentThread(LocalFileWriter writer, IProtocalProvider protocalProvider)
         {
-            this._thread = new Thread(this.ThreadProc);
-            // 必须设置为Background，不然会导致无法重主线程结束程序
-            this._thread.IsBackground = true;
             this._writer = writer;
             this._protocalProvider = protocalProvider;
         }
@@ -60,7 +56,7 @@ namespace WPFPrototype.Commons.Downloads
         #region Position
         private long _position;
         /// <summary>
-        /// Get or set <see cref="Position"/>
+        /// Get or set <see cref="Position"/>，当前下载位置
         /// </summary>
         public long Position
         {
@@ -70,39 +66,58 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region public methods
+        /// <summary>
+        /// 开始下载
+        /// </summary>
         public void Start()
         {
-            this._isStop = false;
+            // 检测是否已经开始，避免重复操作
+            if (this._thread != null) return;
+
+            this._thread = new Thread(this.ThreadProc);
+            // 必须设置为Background，不然会导致无法重主线程结束程序
+            this._thread.IsBackground = true;
             this._thread.Start();
         }
 
+        /// <summary>
+        /// 停止下载
+        /// </summary>
         public void Stop()
         {
-            this._isStop = true;
-            this._thread.Abort();
+            if (this._thread != null)
+            {
+                this._thread.Abort();
+                this._thread = null;
+            }
         }
         #endregion
 
         #region private methods
         private async void ThreadProc()
         {
-            // 初始化数据源
-            if (!this.InitSource()) return;
-
-            if (this._isStop) return; // 暂停下载
-
-            // 下载
-            while (true)
+            try
             {
-                // 获取片段
-                if (!this.InitSegment()) break;
+                // 初始化数据源
+                if (!this.InitSource()) return;
 
-                if (this._isStop) break; // 暂停下载
+                // 下载
+                while (true)
+                {
+                    // 获取片段
+                    if (!this.InitSegment()) break;
 
-                // 下载这个片段
-                await this.Download();
-
-                if (this._isStop) break; // 暂停下载
+                    // 下载这个片段
+                    await this.Download();
+                }// while
+            }
+            catch(ThreadAbortException)
+            {
+                // 手动停止或取消
+            }
+            catch(Exception ex)
+            {
+                // 下载出现错误
             }
         }
 
@@ -123,6 +138,11 @@ namespace WPFPrototype.Commons.Downloads
 
         private bool InitSegment()
         {
+            // 如果当前片段没有下载完，则不用获取新的片段
+
+            // 获取新的片段
+
+            // 没有片段可以获取
             return false;
         }
 
@@ -138,8 +158,6 @@ namespace WPFPrototype.Commons.Downloads
             // 下载这个片段
             using (var stream = await this._protocalProvider.GetStreamAsync(this._source, this._startPosition + this._position, oldEndPosition))
             {
-                if (this._isStop) return; // 暂停下载
-
                 byte[] buffer = new byte[WriteBufferSize];
                 int needReadLength = 0;
                 int readLength = 0;
@@ -149,8 +167,6 @@ namespace WPFPrototype.Commons.Downloads
                 {
                     needReadLength = Math.Min(buffer.Length, (int)(oldEndPosition - this._startPosition + 1 - this._position));
                     readLength = stream.Read(buffer, 0, needReadLength);
-
-                    if (this._isStop) break; // 暂停下载
 
                     this._writer.Write(buffer, this._position + this._startPosition, 0, readLength);
                     this._position += readLength;
