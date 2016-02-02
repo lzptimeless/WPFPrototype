@@ -74,18 +74,6 @@ namespace WPFPrototype.Commons.Downloads
         }
         #endregion
 
-        #region CreateTime
-        private DateTime _createTime;
-        /// <summary>
-        /// Get or set <see cref="CreateTime"/>，本地文件创建时间
-        /// </summary>
-        public DateTime CreateTime
-        {
-            get { return _createTime; }
-            set { _createTime = value; }
-        }
-        #endregion
-
         #region HasSegment
         /// <summary>
         /// Get or set <see cref="HasSegment"/>，本地文件是否分片
@@ -97,6 +85,11 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
         #endregion
 
+        #region constructors
+        public LocalFileInfo()
+        { }
+        #endregion
+
         #region public methods
         /// <summary>
         /// 通过配置文件创建<see cref="LocalFileInfo"/>
@@ -105,7 +98,13 @@ namespace WPFPrototype.Commons.Downloads
         /// <returns></returns>
         public static LocalFileInfo Load(string path)
         {
-            XDocument xml = XDocument.Load(path);
+            XDocument xml;
+            // 以UTF-8的格式加载配置文件
+            using (var reader = new StreamReader(path, Encoding.UTF8))
+            {
+                xml = XDocument.Load(reader);
+            }
+
             LocalFileInfo fileInfo = new LocalFileInfo();
 
             foreach (XElement field in xml.Root.Elements())
@@ -151,9 +150,6 @@ namespace WPFPrototype.Commons.Downloads
                             fileInfo._segments = segments;
                         }
                         break;
-                    case "CreateTime":
-                        fileInfo._createTime = DateTime.Parse(field.Value);
-                        break;
                     default:
                         break;
                 }
@@ -193,9 +189,11 @@ namespace WPFPrototype.Commons.Downloads
                 }
                 root.Add(segments);
             }// if
-            root.Add(new XElement("CreateTime", this._createTime.ToString("yyyy-MM-dd hh:mm:ss")));
-
-            xml.Save(path);
+            // 以UTF-8的方式保存配置
+            using (var writer = new StreamWriter(path, false, Encoding.UTF8))
+            {
+                xml.Save(path);
+            }
         }
         #endregion
     }

@@ -24,6 +24,10 @@ namespace WPFPrototype.Toolkit.Languages
     {
         #region fields
         /// <summary>
+        /// 用于这个对象内部lock
+        /// </summary>
+        private readonly object _syncRoot = new object();
+        /// <summary>
         /// 默认多语言资源文件夹路径
         /// </summary>
         private string _resourceDirectoryPath;
@@ -134,7 +138,7 @@ namespace WPFPrototype.Toolkit.Languages
         {
             EventHandler<EventArgs> handler;
 
-            lock (this)
+            lock (this._syncRoot)
             {
                 handler = this.LanguageChanged;
             }

@@ -56,6 +56,7 @@
     <Compile Include="Downloads\LocalSegment.cs" />
     <Compile Include="Downloads\MinSizeSegmentCalculator.cs" />
     <Compile Include="Downloads\RemoteFileInfo.cs" />
+    <Compile Include="Downloads\SegmentWriterInfo.cs" />
     <Compile Include="Downloads\SegmentThread.cs" />
     <Compile Include="Downloads\SequentialMirrorSelector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
