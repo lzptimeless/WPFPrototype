@@ -16,7 +16,7 @@ namespace WPFPrototype.Commons.Downloads
         /// 初始化下载协议适配接口
         /// </summary>
         /// <param name="downloader">这个协议的拥有者<see cref="Downloader"/></param>
-        void Init(Downloader downloader);
+        void Initialize(Downloader downloader);
 
         /// <summary>
         /// 获取数据源的下载流

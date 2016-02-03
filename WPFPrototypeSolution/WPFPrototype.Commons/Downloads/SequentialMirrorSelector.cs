@@ -13,7 +13,7 @@ namespace WPFPrototype.Commons.Downloads
     public class SequentialMirrorSelector : IMirrorSelector
     {
         #region fields
-        private FileSource _source;
+        private FileSource _mainSource;
         private List<FileSource> _mirrors;
         private int _queryIndex;
         #endregion
@@ -29,27 +29,27 @@ namespace WPFPrototype.Commons.Downloads
         {
             get
             {
-                this.CheckInit();
+                this.ThrowIfNotInitialized();
 
                 return this._mirrors.Count;
             }
         }
 
-        public FileSource Source
+        public FileSource MainSource
         {
             get
             {
-                this.CheckInit();
+                this.ThrowIfNotInitialized();
 
-                return this._source;
+                return this._mainSource;
             }
         }
         #endregion
 
         #region public methods
-        public void Init(Downloader downloader, FileSource source, IEnumerable<FileSource> mirrors)
+        public void Initialize(Downloader downloader, FileSource mainSource, IEnumerable<FileSource> mirrors)
         {
-            this._source = source;
+            this._mainSource = mainSource;
 
             if (mirrors != null)
             {
@@ -65,7 +65,7 @@ namespace WPFPrototype.Commons.Downloads
 
         public FileSource GetNextSource()
         {
-            this.CheckInit();
+            this.ThrowIfNotInitialized();
 
             FileSource src;
 
@@ -75,7 +75,7 @@ namespace WPFPrototype.Commons.Downloads
 
             if (this._queryIndex == 0)
             {
-                src = this._source;
+                src = this._mainSource;
             }
             else
             {
@@ -87,38 +87,38 @@ namespace WPFPrototype.Commons.Downloads
 
         public void Remove(FileSource mirror)
         {
-            this.CheckInit();
+            this.ThrowIfNotInitialized();
 
-            if (this._source == mirror) return;
+            if (this._mainSource == mirror) throw new Exception("Can not remove main source.");
 
             this._mirrors.Remove(mirror);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            this.CheckInit();
+            this.ThrowIfNotInitialized();
 
             var list = new List<FileSource>(this._mirrors);
-            list.Insert(0, this._source);
+            list.Insert(0, this._mainSource);
 
             return list.GetEnumerator();
         }
 
         public IEnumerator<FileSource> GetEnumerator()
         {
-            this.CheckInit();
+            this.ThrowIfNotInitialized();
 
             var list = new List<FileSource>(this._mirrors);
-            list.Insert(0, this._source);
+            list.Insert(0, this._mainSource);
 
             return list.GetEnumerator();
         }
         #endregion
 
         #region private methods
-        private void CheckInit()
+        private void ThrowIfNotInitialized()
         {
-            if (this._source == null) throw new Exception("SequentialMirrorSelector not init.");
+            if (this._mainSource == null) throw new Exception("SequentialMirrorSelector not init.");
             if (this._mirrors == null) throw new Exception("SequentialMirrorSelector not init.");
         }
         #endregion

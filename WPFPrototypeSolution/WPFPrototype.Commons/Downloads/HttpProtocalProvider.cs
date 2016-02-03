@@ -111,7 +111,7 @@ namespace WPFPrototype.Commons.Downloads
             }// using
         }
 
-        public void Init(Downloader downloader)
+        public void Initialize(Downloader downloader)
         {
             // 没有什么需要做的
         }

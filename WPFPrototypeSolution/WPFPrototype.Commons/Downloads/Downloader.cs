@@ -56,10 +56,10 @@ namespace WPFPrototype.Commons.Downloads
             this._segmentCalculator = new MinSizeSegmentCalculator(SegmentMinSize);
 
             this._protocalProvider = new HttpProtocalProvider();
-            this._protocalProvider.Init(this);
+            this._protocalProvider.Initialize(this);
 
             this._mirrorSelector = new SequentialMirrorSelector();
-            this._mirrorSelector.Init(this, localFile.Source, localFile.Mirrors);
+            this._mirrorSelector.Initialize(this, localFile.Source, localFile.Mirrors);
 
             this._localFile = localFile;
             this._writer = new LocalFileWriter(localFile);
@@ -79,10 +79,10 @@ namespace WPFPrototype.Commons.Downloads
             this._segmentCalculator = new MinSizeSegmentCalculator(SegmentMinSize);
 
             this._protocalProvider = new HttpProtocalProvider();
-            this._protocalProvider.Init(this);
+            this._protocalProvider.Initialize(this);
 
             this._mirrorSelector = new SequentialMirrorSelector();
-            this._mirrorSelector.Init(this, localFile.Source, localFile.Mirrors);
+            this._mirrorSelector.Initialize(this, localFile.Source, localFile.Mirrors);
 
             this._localFile = localFile;
             this._writer = new LocalFileWriter(localFile);
@@ -142,16 +142,15 @@ namespace WPFPrototype.Commons.Downloads
             this._segmentCalculator = new MinSizeSegmentCalculator(SegmentMinSize);
 
             this._protocalProvider = new HttpProtocalProvider();
-            this._protocalProvider.Init(this);
+            this._protocalProvider.Initialize(this);
 
             this._mirrorSelector = new SequentialMirrorSelector();
-            this._mirrorSelector.Init(this, source, mirrorSources);
+            this._mirrorSelector.Initialize(this, source, mirrorSources);
 
             this._localFile = new LocalFileInfo();
             this._localFile.Source = source;
             this._localFile.Mirrors = mirrorSources;
             this._localFile.SavePath = savePath;
-            this._localFile.CreateTime = DateTime.Now;
             this._writer = new LocalFileWriter(this._localFile);
 
             this._threadCount = threadCount;
@@ -232,7 +231,6 @@ namespace WPFPrototype.Commons.Downloads
                 localFile.Segments.Add(
                     new LocalSegment
                     {
-                        Index = 0,
                         StartPosition = 0,
                         EndPosition = remoteInfo.Size - 1,
                         Position = 0
@@ -246,19 +244,16 @@ namespace WPFPrototype.Commons.Downloads
 
             // 初始化分片
             List<LocalSegment> segments = new List<LocalSegment>();
-            int index = 0;
             foreach (var calculateSegment in calculatedSegments)
             {
                 segments.Add(
                     new LocalSegment
                     {
-                        Index = index,
                         StartPosition = calculateSegment.StartPosition,
                         EndPosition = calculateSegment.EndPosition,
                         Position = 0
                     }
                 );
-                index++;
             }
 
             localFile.Segments = segments;

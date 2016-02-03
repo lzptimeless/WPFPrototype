@@ -14,7 +14,7 @@ namespace WPFPrototype.Commons.Downloads
         /// <summary>
         /// 数据源
         /// </summary>
-        FileSource Source { get; }
+        FileSource MainSource { get; }
 
         /// <summary>
         /// 镜像数量
@@ -27,7 +27,7 @@ namespace WPFPrototype.Commons.Downloads
         /// <param name="downloader"><see cref="Downloader"/></param>
         /// <param name="source">原始数据源</param>
         /// <param name="mirrors">镜像数组</param>
-        void Init(Downloader downloader, FileSource source, IEnumerable<FileSource> mirrors);
+        void Initialize(Downloader downloader, FileSource source, IEnumerable<FileSource> mirrors);
 
         /// <summary>
         /// 获取下一个数据源

@@ -13,18 +13,6 @@ namespace WPFPrototype.Commons.Downloads
     public class LocalSegment
     {
         #region properties
-        #region Index
-        private int _index;
-        /// <summary>
-        /// Get or set <see cref="Index"/>，片段索引
-        /// </summary>
-        public int Index
-        {
-            get { return _index; }
-            set { _index = value; }
-        }
-        #endregion
-
         #region StartPosition
         private long _startPosition;
         /// <summary>
@@ -76,9 +64,6 @@ namespace WPFPrototype.Commons.Downloads
             {
                 switch (field.Name.LocalName)
                 {
-                    case "Index":
-                        localSg._index = int.Parse(field.Value);
-                        break;
                     case "StartPosition":
                         localSg._startPosition = long.Parse(field.Value);
                         break;
@@ -103,7 +88,6 @@ namespace WPFPrototype.Commons.Downloads
         public XElement ToXElement()
         {
             XElement element = new XElement("LocalSegment",
-                    new XElement("Index", this._index),
                     new XElement("StartPosition", this._startPosition),
                     new XElement("EndPosition", this._endPosition),
                     new XElement("Position", this._position)
