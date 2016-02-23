@@ -47,7 +47,7 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region public methods
-        public void Initialize(Downloader downloader, FileSource mainSource, IEnumerable<FileSource> mirrors)
+        public void Initialize(FileSource mainSource, IEnumerable<FileSource> mirrors)
         {
             this._mainSource = mainSource;
 

@@ -22,10 +22,6 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         private bool _isDisposed;
         /// <summary>
-        /// 文件总大小
-        /// </summary>
-        private long _totalSize;
-        /// <summary>
         /// 本地文件保存路径
         /// </summary>
         private string _savePath;
@@ -40,33 +36,28 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region constructors
-        public LocalFileWriter(LocalFileInfo info)
+        public LocalFileWriter(string savePath, List<LocalSegment> localSegments)
         {
-            if (info == null) throw new ArgumentNullException("info");
-            if (string.IsNullOrEmpty(info.SavePath)) throw new Exception("info.SavePath can not be empty.");
-            if (info.RemoteInfo == null) throw new Exception("info.RemoteInfo can not be empty.");
-            if (info.RemoteInfo.Size <= 0) throw new Exception("info.RemoteInfo.Size must bigger than 0.");
+            if (string.IsNullOrEmpty(savePath)) throw new Exception("savePath can not be empty.");
+            if (localSegments == null) throw new ArgumentNullException("localSegments");
+            if (localSegments.Count == 0) throw new Exception("localSegments can not be empty.");
 
-            this._savePath = info.SavePath;
-            this._totalSize = info.RemoteInfo.Size;
+            this._savePath = savePath;
             // 缓存文件片段
             this._segments = new List<ThreadSegment>();
-
-            if (info.Segments != null)
+            foreach (var segment in localSegments)
             {
-                foreach (var segment in info.Segments)
+                this._segments.Add(new ThreadSegment
                 {
-                    this._segments.Add(new ThreadSegment
+                    // 有必要重新创建LocalSegment，防止被外部修改
+                    Segment = new LocalSegment
                     {
-                        Segment = new LocalSegment
-                        { 
-                            StartPosition = segment.StartPosition,
-                            EndPosition = segment.EndPosition,
-                            Position = segment.Position
-                        }
-                    });
-                }// foreach
-            }// if
+                        StartPosition = segment.StartPosition,
+                        EndPosition = segment.EndPosition,
+                        Position = segment.Position
+                    }
+                });
+            }// foreach
         }
         #endregion
 
@@ -76,6 +67,33 @@ namespace WPFPrototype.Commons.Downloads
 
         #region public methods
         /// <summary>
+        /// 获取当前文件片段的下载状态
+        /// </summary>
+        /// <returns></returns>
+        public List<LocalSegment> GetSegments()
+        {
+            List<LocalSegment> localSegments = new List<LocalSegment>();
+
+            lock (this._syncRoot)
+            {
+                LocalSegment innerSegment;
+                foreach (var segment in this._segments)
+                {
+                    innerSegment = segment.Segment;
+                    // 复制LocalSegment，防止被外部操作意外修改
+                    localSegments.Add(new LocalSegment
+                    {
+                        StartPosition = innerSegment.StartPosition,
+                        EndPosition = innerSegment.EndPosition,
+                        Position = innerSegment.Position
+                    });
+                }
+            }
+
+            return localSegments;
+        }
+
+        /// <summary>
         /// 创建本地文件，如果已经存在则不创建，设置文件大小
         /// </summary>
         public void CreateFile()
@@ -84,13 +102,33 @@ namespace WPFPrototype.Commons.Downloads
             {
                 this.ThrowIfDisposed();
 
+                var firstSegment = this._segments.First();
+                var lastSegment = this._segments.Last();
+                long totalSize = lastSegment.Segment.EndPosition - firstSegment.Segment.StartPosition + 1;
                 FileStream localStream = new FileStream(this._savePath, FileMode.OpenOrCreate, FileAccess.Write);
-                if (localStream.Length != this._totalSize)
+                if (localStream.Length != totalSize)
                 {
-                    localStream.SetLength(this._totalSize);
+                    localStream.SetLength(totalSize);
                 }
                 this._stream = localStream;
             }
+        }
+
+        /// <summary>
+        /// 获取文件是否已经下载完成
+        /// </summary>
+        /// <returns></returns>
+        public bool IsCompleted()
+        {
+            lock (this._syncRoot)
+            {
+                foreach (var segment in this._segments)
+                {
+                    if (!segment.IsCompleted) return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -98,7 +136,7 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         /// <param name="threadID">注册的线程ID</param>
         /// <returns>需要下载的片段</returns>
-        public CalculatedSegment RegisterSegment(int threadID)
+        public RegisteredSegment RegisterSegment(int threadID)
         {
             lock (this._syncRoot)
             {
@@ -120,7 +158,7 @@ namespace WPFPrototype.Commons.Downloads
                 {
                     newSegment.ThreadID = threadID;
                     var innerSegment = newSegment.Segment;
-                    return new CalculatedSegment(innerSegment.StartPosition + innerSegment.Position, innerSegment.EndPosition);
+                    return new RegisteredSegment(innerSegment.StartPosition + innerSegment.Position, innerSegment.EndPosition);
                 }
 
                 return null;
@@ -128,18 +166,18 @@ namespace WPFPrototype.Commons.Downloads
         }
 
         /// <summary>
-        /// 取消注册片段，一般这个片段数据下载完成时调用
+        /// 取消注册片段，一般这个片段数据下载完成时调用。如果没有注册过，则没有影响
         /// </summary>
         /// <param name="threadID">需要注册的线程ID</param>
         public void UnregisterSegment(int threadID)
         {
-            lock(this._syncRoot)
+            lock (this._syncRoot)
             {
                 this.ThrowIfDisposed();
 
                 // 先查找这个线程是否已经注册过片段
                 var segment = this.GetThreadSegment(threadID);
-                if (segment == null) throw new Exception(string.Format("The thread:{0} is not registered.", threadID));
+                if (segment == null) return;
 
                 segment.ThreadID = SegmentThread.EmptyID;
             }

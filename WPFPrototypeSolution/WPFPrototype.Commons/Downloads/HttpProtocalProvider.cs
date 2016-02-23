@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace WPFPrototype.Commons.Downloads
@@ -27,8 +28,9 @@ namespace WPFPrototype.Commons.Downloads
         /// <param name="source">数据源</param>
         /// <param name="startPosition">片段起始地址</param>
         /// <param name="endPosition">片段结束地址</param>
+        /// <param name="ct">用来检测是否已经取消</param>
         /// <returns></returns>
-        public async Task<Stream> GetStreamAsync(FileSource source, long startPosition, long endPosition)
+        public async Task<Stream> GetStreamAsync(FileSource source, long startPosition, long endPosition, CancellationToken ct)
         {
             // 创建下载请求
             var client = this.CreateClient(source);
@@ -48,7 +50,8 @@ namespace WPFPrototype.Commons.Downloads
             HttpResponseMessage response;
             try
             {
-                response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+                ct.ThrowIfCancellationRequested(); // 检测是否已经取消
             }
             catch
             {
@@ -63,6 +66,7 @@ namespace WPFPrototype.Commons.Downloads
             {
                 response.EnsureSuccessStatusCode();
                 stream = await response.Content.ReadAsStreamAsync();
+                ct.ThrowIfCancellationRequested(); // 检测是否已经取消
             }
             catch
             {
@@ -80,14 +84,17 @@ namespace WPFPrototype.Commons.Downloads
         /// 获取下载文件的信息
         /// </summary>
         /// <param name="source"><see cref="FileSource"/></param>
+        /// <param name="ct">用来检测是否已经取消</param>
         /// <returns></returns>
-        public async Task<RemoteFileInfo> GetFileInfoAsync(FileSource source)
+        public async Task<RemoteFileInfo> GetFileInfoAsync(FileSource source, CancellationToken ct)
         {
             using (var client = this.CreateClient(source))
             {
                 using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, source.Url))
-                using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+                using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct))
                 {
+                    ct.ThrowIfCancellationRequested();
+
                     response.EnsureSuccessStatusCode();
 
                     var headers = response.Headers;
@@ -110,12 +117,6 @@ namespace WPFPrototype.Commons.Downloads
                 }// using
             }// using
         }
-
-        public void Initialize(Downloader downloader)
-        {
-            // 没有什么需要做的
-        }
-
         #endregion
 
         #region private methods

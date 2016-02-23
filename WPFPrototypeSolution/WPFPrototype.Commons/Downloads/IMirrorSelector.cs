@@ -24,10 +24,9 @@ namespace WPFPrototype.Commons.Downloads
         /// <summary>
         /// 初始化镜像
         /// </summary>
-        /// <param name="downloader"><see cref="Downloader"/></param>
         /// <param name="source">原始数据源</param>
         /// <param name="mirrors">镜像数组</param>
-        void Initialize(Downloader downloader, FileSource source, IEnumerable<FileSource> mirrors);
+        void Initialize(FileSource source, IEnumerable<FileSource> mirrors);
 
         /// <summary>
         /// 获取下一个数据源

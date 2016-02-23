@@ -91,6 +91,11 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region public methods
+        public static bool IsSameSource(FileSource left, FileSource right)
+        {
+            return string.Equals(left.Url, right.Url, StringComparison.InvariantCultureIgnoreCase);
+        }
+
         /// <summary>
         /// 通过序列化数据创建<see cref="FileSource"/>
         /// </summary>

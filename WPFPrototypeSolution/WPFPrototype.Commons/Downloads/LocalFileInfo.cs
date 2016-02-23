@@ -15,14 +15,14 @@ namespace WPFPrototype.Commons.Downloads
     {
         #region properties
         #region Source
-        private FileSource _source;
+        private FileSource _mainSource;
         /// <summary>
-        /// Get or set <see cref="Source"/>，原始下载源
+        /// Get or set <see cref="MainSource"/>，原始下载源
         /// </summary>
-        public FileSource Source
+        public FileSource MainSource
         {
-            get { return _source; }
-            set { _source = value; }
+            get { return _mainSource; }
+            set { _mainSource = value; }
         }
         #endregion
 
@@ -115,7 +115,7 @@ namespace WPFPrototype.Commons.Downloads
                         {
                             if (string.IsNullOrEmpty(field.Value)) break;
 
-                            fileInfo._source = FileSource.CreateFromXElement(field);
+                            fileInfo._mainSource = FileSource.CreateFromXElement(field);
                         }
                         break;
                     case "Mirrors":
@@ -167,7 +167,7 @@ namespace WPFPrototype.Commons.Downloads
             XDocument xml = new XDocument(new XElement("LocalFileInfo"));
             XElement root = xml.Root;
 
-            if (this._source != null) root.Add(this._source.ToXElement());
+            if (this._mainSource != null) root.Add(this._mainSource.ToXElement());
             if (this._mirrors != null && this._mirrors.Count > 0)
             {
                 XElement mirrors = new XElement("Mirrors");

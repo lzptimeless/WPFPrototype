@@ -18,10 +18,6 @@ namespace WPFPrototype.Toolkit.Gifs
     {
         #region fields
         /// <summary>
-        /// 用于这个对象内部lock
-        /// </summary>
-        private readonly object _syncRoot = new object();
-        /// <summary>
         /// 用以显示的图像源
         /// </summary>
         private WriteableBitmap _bitmap;
@@ -78,12 +74,7 @@ namespace WPFPrototype.Toolkit.Gifs
 
         private void OnImageSourceChanged()
         {
-            EventHandler<EventArgs> handler;
-
-            lock (this._syncRoot)
-            {
-                handler = this.ImageSourceChanged;
-            }
+            EventHandler<EventArgs> handler = this.ImageSourceChanged;
 
             if (handler != null) handler(this, EventArgs.Empty);
         }

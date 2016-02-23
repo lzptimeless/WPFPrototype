@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,6 +23,7 @@ namespace WPFPrototype
     {
         #region fields
         private const string Url = "http://cdn.akamai.steamstatic.com/steam/apps/389870/capsule_616x353.jpg?t=1445501727";
+        private string _savePath;
         #endregion
 
         public DownloadManagerWindow()
@@ -31,8 +33,15 @@ namespace WPFPrototype
 
         private void Download_Click(object sender, RoutedEventArgs e)
         {
-            Downloader downloader = new Downloader(Url, @"D:\" + DownloadHelper.GetFileNameFromUrl(Url), 2);
+            _savePath = @"c:\" + DownloadHelper.GetFileNameFromUrl(Url);
+            Downloader downloader = new Downloader(Url, _savePath,2);
+            downloader.Completed += Downloader_Completed;
             downloader.Start();
+        }
+
+        private void Downloader_Completed(object sender, EventArgs e)
+        {
+            Process.Start(this._savePath);
         }
     }
 }
