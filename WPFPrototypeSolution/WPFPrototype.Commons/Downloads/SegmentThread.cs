@@ -35,15 +35,20 @@ namespace WPFPrototype.Commons.Downloads
         /// 用于取消下载
         /// </summary>
         private CancellationTokenSource _cts;
+        /// <summary>
+        /// 工作ID，用来在多线程中检测当前操作是否已经过期
+        /// </summary>
+        private long _workID;
         #endregion
 
         #region constructors
-        public SegmentThread(int id, LocalFileWriter writer, SourceProvider sourceProvider)
+        public SegmentThread(int id, LocalFileWriter writer, SourceProvider sourceProvider, long workID)
         {
             this._id = id;
             this._writer = writer;
             this._sourceProvider = sourceProvider;
             this._status = SegmentThreadStatuses.Idle;
+            this._workID = workID;
         }
         #endregion
 
@@ -72,29 +77,81 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region events
-        #region Exited
+        #region Completed
         /// <summary>
-        /// Event name of <see cref="Exited"/>
+        /// Event name of <see cref="Completed"/>
         /// </summary>
-        public const string ExitedEventName = "Exited";
+        public const string CompletedEventName = "Completed";
 
-        public event EventHandler<ThreadExitedArgs> Exited;
+        public event EventHandler<ThreadExitedArgs> Completed;
 
-        private void OnExited(ThreadExitedArgs e)
+        private void OnCompleted(ThreadExitedArgs e)
         {
-            EventHandler<ThreadExitedArgs> handler = this.Exited;
+            EventHandler<ThreadExitedArgs> handler = this.Completed;
 
             if (handler != null) handler(this, e);
         }
 
-        public void AddWeakExitedHandler(EventHandler<ThreadExitedArgs> handler)
+        public void AddWeakCompletedHandler(EventHandler<ThreadExitedArgs> handler)
         {
-            WeakEventManager<SegmentThread, ThreadExitedArgs>.AddHandler(this, ExitedEventName, handler);
+            WeakEventManager<SegmentThread, ThreadExitedArgs>.AddHandler(this, CompletedEventName, handler);
         }
 
-        public void RemoveWeakExitedHandler(EventHandler<ThreadExitedArgs> handler)
+        public void RemoveWeakCompletedHandler(EventHandler<ThreadExitedArgs> handler)
         {
-            WeakEventManager<SegmentThread, ThreadExitedArgs>.RemoveHandler(this, ExitedEventName, handler);
+            WeakEventManager<SegmentThread, ThreadExitedArgs>.RemoveHandler(this, CompletedEventName, handler);
+        }
+        #endregion
+
+        #region Failed
+        /// <summary>
+        /// Event name of <see cref="Failed"/>
+        /// </summary>
+        public const string FailedEventName = "Failed";
+
+        public event EventHandler<ThreadExitedArgs> Failed;
+
+        private void OnFailed(ThreadExitedArgs e)
+        {
+            EventHandler<ThreadExitedArgs> handler = this.Failed;
+
+            if (handler != null) handler(this, e);
+        }
+
+        public void AddWeakFailedHandler(EventHandler<ThreadExitedArgs> handler)
+        {
+            WeakEventManager<SegmentThread, ThreadExitedArgs>.AddHandler(this, FailedEventName, handler);
+        }
+
+        public void RemoveWeakFailedHandler(EventHandler<ThreadExitedArgs> handler)
+        {
+            WeakEventManager<SegmentThread, ThreadExitedArgs>.RemoveHandler(this, FailedEventName, handler);
+        }
+        #endregion
+
+        #region Paused
+        /// <summary>
+        /// Event name of <see cref="Paused"/>
+        /// </summary>
+        public const string PausedEventName = "Paused";
+
+        public event EventHandler<ThreadExitedArgs> Paused;
+
+        private void OnPaused(ThreadExitedArgs e)
+        {
+            EventHandler<ThreadExitedArgs> handler = this.Paused;
+
+            if (handler != null) handler(this, e);
+        }
+
+        public void AddWeakPausedHandler(EventHandler<ThreadExitedArgs> handler)
+        {
+            WeakEventManager<SegmentThread, ThreadExitedArgs>.AddHandler(this, PausedEventName, handler);
+        }
+
+        public void RemoveWeakPausedHandler(EventHandler<ThreadExitedArgs> handler)
+        {
+            WeakEventManager<SegmentThread, ThreadExitedArgs>.RemoveHandler(this, PausedEventName, handler);
         }
         #endregion
         #endregion
@@ -133,8 +190,9 @@ namespace WPFPrototype.Commons.Downloads
                 this._cts = null;
                 this._writer.UnregisterSegment(this._id);
                 this._status = SegmentThreadStatuses.Paused;
-                this.OnExited(new ThreadExitedArgs(this._status));
             }
+
+            this.OnPaused(new ThreadExitedArgs(this._workID));
         }
         #endregion
 
@@ -195,6 +253,8 @@ namespace WPFPrototype.Commons.Downloads
             }
             finally
             {
+                bool isRaiseCompleted = false;
+                bool isRaiseFailed = false;
                 // 取消注册片段
                 lock(this._syncRoot)
                 {
@@ -202,11 +262,15 @@ namespace WPFPrototype.Commons.Downloads
                     {
                         this._cts = null;
                         this._writer.UnregisterSegment(this._id);
-                        this.OnExited(new ThreadExitedArgs(this._status));// 通知Downloader这个线程已经结束
+                        isRaiseCompleted = this._status == SegmentThreadStatuses.Idle;
+                        isRaiseFailed = this._status == SegmentThreadStatuses.Failed;
                     }
                 }
                 cts.Dispose();// 释放取消资源
-            }
+
+                if (isRaiseCompleted) this.OnCompleted(new ThreadExitedArgs(this._workID));
+                if (isRaiseFailed) this.OnFailed(new ThreadExitedArgs(this._workID));
+            }// finally
         }
 
         /// <summary>

@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="Downloads\CalculatedSegment.cs" />
     <Compile Include="Downloads\Downloader.cs" />
+    <Compile Include="Downloads\DownloaderStatuses.cs" />
     <Compile Include="Downloads\DownloadHelper.cs" />
     <Compile Include="Downloads\FileSource.cs" />
     <Compile Include="Downloads\HttpProtocalProvider.cs" />
@@ -52,7 +53,7 @@
     <Compile Include="Downloads\IMirrorSelector.cs" />
     <Compile Include="Downloads\IProtocalProvider.cs" />
     <Compile Include="Downloads\ISegmentCalculator.cs" />
-    <Compile Include="Downloads\LocalFileInfo.cs" />
+    <Compile Include="Downloads\LocalFileConfig.cs" />
     <Compile Include="Downloads\LocalFileWriter.cs" />
     <Compile Include="Downloads\LocalSegment.cs" />
     <Compile Include="Downloads\MinSizeSegmentCalculator.cs" />

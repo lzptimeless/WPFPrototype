@@ -11,7 +11,7 @@ namespace WPFPrototype.Commons.Downloads
     /// <summary>
     /// 本地下载配置文件
     /// </summary>
-    public class LocalFileInfo
+    public class LocalFileConfig
     {
         #region properties
         #region Source
@@ -35,18 +35,6 @@ namespace WPFPrototype.Commons.Downloads
         {
             get { return _mirrors; }
             set { _mirrors = value; }
-        }
-        #endregion
-
-        #region SavePath
-        private string _savePath;
-        /// <summary>
-        /// Get or set <see cref="SavePath"/>，下载文件保存路径
-        /// </summary>
-        public string SavePath
-        {
-            get { return _savePath; }
-            set { _savePath = value; }
         }
         #endregion
 
@@ -86,17 +74,17 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region constructors
-        public LocalFileInfo()
+        public LocalFileConfig()
         { }
         #endregion
 
         #region public methods
         /// <summary>
-        /// 通过配置文件创建<see cref="LocalFileInfo"/>
+        /// 通过配置文件创建<see cref="LocalFileConfig"/>
         /// </summary>
         /// <param name="path">配置文件路径</param>
         /// <returns></returns>
-        public static LocalFileInfo Load(string path)
+        public static LocalFileConfig Load(string path)
         {
             XDocument xml;
             // 以UTF-8的格式加载配置文件
@@ -105,7 +93,7 @@ namespace WPFPrototype.Commons.Downloads
                 xml = XDocument.Load(reader);
             }
 
-            LocalFileInfo fileInfo = new LocalFileInfo();
+            LocalFileConfig fileInfo = new LocalFileConfig();
 
             foreach (XElement field in xml.Root.Elements())
             {
@@ -128,9 +116,6 @@ namespace WPFPrototype.Commons.Downloads
 
                             fileInfo._mirrors = mirrors;
                         }
-                        break;
-                    case "SavePath":
-                        fileInfo._savePath = field.Value ?? string.Empty;
                         break;
                     case "RemoteInfo":
                         {
@@ -164,7 +149,7 @@ namespace WPFPrototype.Commons.Downloads
         /// <param name="path">保存路径</param>
         public void Save(string path)
         {
-            XDocument xml = new XDocument(new XElement("LocalFileInfo"));
+            XDocument xml = new XDocument(new XElement("LocalFileConfig"));
             XElement root = xml.Root;
 
             if (this._mainSource != null) root.Add(this._mainSource.ToXElement());
@@ -177,7 +162,7 @@ namespace WPFPrototype.Commons.Downloads
                 }
                 root.Add(mirrors);
             }// if
-            if (!string.IsNullOrEmpty(this._savePath)) root.Add(new XElement("SavePath", this._savePath));
+
             if (this._remoteInfo != null) root.Add(this._remoteInfo.ToXElement());
 
             if (this._segments != null && this._segments.Count > 0)
@@ -192,7 +177,7 @@ namespace WPFPrototype.Commons.Downloads
             // 以UTF-8的方式保存配置
             using (var writer = new StreamWriter(path, false, Encoding.UTF8))
             {
-                xml.Save(path);
+                xml.Save(writer);
             }
         }
         #endregion

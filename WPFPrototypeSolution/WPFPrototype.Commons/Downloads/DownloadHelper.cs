@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -41,6 +42,47 @@ namespace WPFPrototype.Commons.Downloads
             if (string.IsNullOrEmpty(fileName)) return defaultName;
 
             return fileName;
+        }
+
+        /// <summary>
+        /// 通过文件路径获取这个文件的下载配置文件路径
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <returns></returns>
+        public static string GetConfigPathFromFilePath(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentException("filePath can not be null or empty.");
+
+            return string.Format("{0}.config", filePath);
+        }
+
+        /// <summary>
+        /// 通过文件路径获取这个文件的下载临时文件路径
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <returns></returns>
+        public static string GetTmpPathFromFilePath(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath)) throw new ArgumentException("filePath can not be null or empty.");
+
+            return string.Format("{0}.tmp", filePath);
+        }
+
+        /// <summary>
+        /// 通过下载配置文件路径获取这个文件的保存路径
+        /// </summary>
+        /// <param name="configPath">下载配置文件路径</param>
+        /// <returns></returns>
+        public static string GetFilePathFromConfigPath(string configPath)
+        {
+            if (string.IsNullOrEmpty(configPath)) throw new ArgumentException("configPath can not be null or empty.");
+
+            if (!configPath.EndsWith(".config", StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new ArgumentException("configPath is invalid.");
+            }
+
+            return configPath.Substring(0, configPath.Length - 7);
         }
     }
 }

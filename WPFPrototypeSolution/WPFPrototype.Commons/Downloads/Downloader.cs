@@ -24,6 +24,10 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         public const int DefaultThreadCount = 4;
         /// <summary>
+        /// 空的WorkID
+        /// </summary>
+        public const long EmptyWorkID = 0;
+        /// <summary>
         /// 用于lock操作
         /// </summary>
         private readonly object _syncRoot = new object();
@@ -48,45 +52,60 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         private List<SegmentThread> _threads;
         /// <summary>
-        /// 缓存上次没有下载完成的LocalFileInfo
+        /// 缓存上次没有下载完成的LocalFileConfig
         /// </summary>
-        private LocalFileInfo _localFileCache;
+        private LocalFileConfig _config;
+        /// <summary>
+        /// 文件保存路径
+        /// </summary>
+        private string _savePath;
+        /// <summary>
+        /// 临时文件保存路径
+        /// </summary>
+        private string _tmpPath;
+        /// <summary>
+        /// 配置文件保存路径
+        /// </summary>
+        private string _configPath;
+        /// <summary>
+        /// 工作ID，用来在多线程中检测当前操作是否已经过期
+        /// </summary>
+        private long _workID;
         #endregion
 
         #region constructors
         /// <summary>
         /// 创建<see cref="Downloader"/>
         /// </summary>
-        /// <param name="localFile">本地文件</param>
-        public Downloader(LocalFileInfo localFile)
-            : this(localFile, DefaultThreadCount)
+        /// <param name="configPath">本地文件</param>
+        public Downloader(string configPath)
+            : this(configPath, DefaultThreadCount)
         {
         }
 
         /// <summary>
         /// 创建<see cref="Downloader"/>
         /// </summary>
-        /// <param name="localFile">本地文件</param>
+        /// <param name="configPath">本地文件</param>
         /// <param name="threadCount">下载线程数</param>
-        public Downloader(LocalFileInfo localFile, int threadCount)
+        public Downloader(string configPath, int threadCount)
         {
-            if (localFile.MainSource == null) throw new Exception("localFile.MainSource can not be null.");
-            if (string.IsNullOrEmpty(localFile.SavePath)) throw new Exception("localFile.SavePath can not be null or empty.");
-            if (localFile.RemoteInfo == null) throw new Exception("localFile.RemoteInfo can not be null.");
-            if (localFile.RemoteInfo.Size < 0) throw new Exception("localFile.RemoteInfo.Size must bigger than 0.");
-            if (!localFile.HasSegment) throw new Exception("localFile.Segments can not be empty.");
+            if (string.IsNullOrEmpty(configPath)) throw new ArgumentException("configPath can not be null or empty.");
 
+            var localFileConfig = LocalFileConfig.Load(configPath);
+
+            if (localFileConfig.MainSource == null) throw new Exception("LocalFileConfig.MainSource can not be null.");
+            if (localFileConfig.RemoteInfo == null) throw new Exception("LocalFileConfig.RemoteInfo can not be null.");
+            if (localFileConfig.RemoteInfo.Size < 0) throw new Exception("LocalFileConfig.RemoteInfo.Size must bigger than 0.");
+            if (!localFileConfig.HasSegment) throw new Exception("LocalFileConfig.Segments can not be empty.");
+
+            this._workID = EmptyWorkID;
             this._segmentCalculator = new MinSizeSegmentCalculator(SegmentMinSize);
-
-            // 初始化SourceProvider移动到Start方法里
-            //var protocalProvider = new HttpProtocalProvider();
-            //var mirrorSelector = new SequentialMirrorSelector();
-            //mirrorSelector.Initialize(localFile.Source, localFile.Mirrors);
-            //this._sourceProvider = new SourceProvider(mirrorSelector, protocalProvider);
-
-            //this._writer = new LocalFileWriter(localFile.SavePath, localFile.RemoteInfo.Size, localFile.Segments); // writer要在Start的时候初始化
-            this._localFileCache = localFile;
+            this._config = localFileConfig;
             this._maxThreadCount = threadCount;
+            this._configPath = configPath;
+            this._savePath = DownloadHelper.GetFilePathFromConfigPath(configPath);
+            this._tmpPath = DownloadHelper.GetTmpPathFromFilePath(this._savePath);
         }
 
         /// <summary>
@@ -131,6 +150,7 @@ namespace WPFPrototype.Commons.Downloads
             if (string.IsNullOrEmpty(savePath)) throw new ArgumentException("savePath can not be null or empty.");
             if (threadCount <= 0) throw new ArgumentException("threadCount must bigger than 0.");
 
+            this._workID = EmptyWorkID;
             this._segmentCalculator = new MinSizeSegmentCalculator(SegmentMinSize);
             // 初始化_localFileCache
             var mainSource = new FileSource(url);
@@ -143,24 +163,31 @@ namespace WPFPrototype.Commons.Downloads
                     mirrorSources.Add(new FileSource(mirror));
                 }
             }// if
-            this._localFileCache = new LocalFileInfo
+
+            this._config = new LocalFileConfig
             {
                 MainSource = mainSource,
                 Mirrors = mirrorSources,
-                SavePath = savePath
             };
-            // 初始化SourceProvider移动到了Start方法里
-            //var protocalProvider = new HttpProtocalProvider();
-            //var mirrorSelector = new SequentialMirrorSelector();
-            //mirrorSelector.Initialize(mainSource, mirrorSources);
-            //this._sourceProvider = new SourceProvider(mirrorSelector, protocalProvider);
 
-            // this._writer = // writer需要在Start的时候初始化
             this._maxThreadCount = threadCount;
+            this._savePath = savePath;
+            this._configPath = DownloadHelper.GetConfigPathFromFilePath(savePath);
+            this._tmpPath = DownloadHelper.GetTmpPathFromFilePath(savePath);
         }
         #endregion
 
         #region properties
+        #region Status
+        private DownloaderStatuses _status;
+        /// <summary>
+        /// Get or set <see cref="Status"/>
+        /// </summary>
+        public DownloaderStatuses Status
+        {
+            get { return this._status; }
+        }
+        #endregion
         #endregion
 
         #region events
@@ -189,6 +216,32 @@ namespace WPFPrototype.Commons.Downloads
             WeakEventManager<Downloader, EventArgs>.RemoveHandler(this, CompletedEventName, handler);
         }
         #endregion
+
+        #region Failed
+        /// <summary>
+        /// Event name of <see cref="Failed"/>
+        /// </summary>
+        public const string FailedEventName = "Failed";
+
+        public event EventHandler<EventArgs> Failed;
+
+        private void OnFailed()
+        {
+            EventHandler<EventArgs> handler = this.Failed;
+
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public void AddWeakFailedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.AddHandler(this, FailedEventName, handler);
+        }
+
+        public void RemoveWeakFailedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.RemoveHandler(this, FailedEventName, handler);
+        }
+        #endregion
         #endregion
 
         #region public methods
@@ -197,97 +250,98 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         public async void Start()
         {
-            // 重置SourceProvider
-            var protocalProvider = new HttpProtocalProvider();
-            var mirrorSelector = new SequentialMirrorSelector();
-            mirrorSelector.Initialize(this._localFileCache.MainSource, this._localFileCache.Mirrors);
-            this._sourceProvider = new SourceProvider(mirrorSelector, protocalProvider);
+            long workID;
+            SourceProvider sourceProvider;
+            lock (this._syncRoot)
+            {
+                if (this._status == DownloaderStatuses.Downloading) throw new Exception("Downloader is working.");
+                if (this._status == DownloaderStatuses.Completed) throw new Exception("Downloader is completed.");
+
+                this._status = DownloaderStatuses.Downloading; // 设置Downloader状态
+
+                // 生成新的workID
+                workID = this.FreshWorkID();
+
+                // 重置SourceProvider
+                var protocalProvider = new HttpProtocalProvider();
+                var mirrorSelector = new SequentialMirrorSelector();
+                mirrorSelector.Initialize(this._config.MainSource, this._config.Mirrors);
+                sourceProvider = new SourceProvider(mirrorSelector, protocalProvider);
+                this._sourceProvider = sourceProvider;
+            }// lock
 
             // 初始化SourceProvider
-            await this._sourceProvider.InitializeAsync(CancellationToken.None);
-            var newRemoteFileInfo = this._sourceProvider.GetRemoteFileInfo();
+            await sourceProvider.InitializeAsync(CancellationToken.None);
 
-            // 对文件进行分片
-            List<LocalSegment> segments = new List<LocalSegment>();
-            if (this._localFileCache.HasSegment &&
-                this._localFileCache.RemoteInfo != null &&
-                RemoteFileInfo.IsSameFile(this._localFileCache.RemoteInfo, newRemoteFileInfo))
+            lock (this._syncRoot)
             {
-                // 如果文件已经分片,服务器文件信息与缓存的文件信息一致则用缓存的文件分片
-                segments.AddRange(this._localFileCache.Segments);
-            }
+                // 检测当前操作是否过期
+                if (workID != this._workID) return;
 
-            // 如果没有分片或则缓存的文件已经过时了则重新分片
-            if (segments.Count == 0)
-            {
-                if (newRemoteFileInfo.IsAcceptRange)// 如果文件支持分段下载
+                var newRemoteFileInfo = this._sourceProvider.GetRemoteFileInfo();
+
+                // 对文件进行分片
+                List<LocalSegment> segments = new List<LocalSegment>();
+                if (this._config.HasSegment &&
+                    this._config.RemoteInfo != null &&
+                    RemoteFileInfo.IsSameFile(this._config.RemoteInfo, newRemoteFileInfo))
                 {
-                    var calculateSegments = this._segmentCalculator.GetSegments(this._maxThreadCount, newRemoteFileInfo);
-                    foreach (var calculateSegment in calculateSegments)
-                    {
-                        segments.Add(new LocalSegment
-                        {
-                            StartPosition = calculateSegment.StartPosition,
-                            EndPosition = calculateSegment.EndPosition
-                        });
-                    }
+                    // 如果文件已经分片,服务器文件信息与缓存的文件信息一致则用缓存的文件分片
+                    segments.AddRange(this._config.Segments);
                 }
-                else// 如果文件不支持分段下载
+
+                // 如果没有分片或则缓存的文件已经过时了则重新分片
+                if (segments.Count == 0)
                 {
-                    if (newRemoteFileInfo.Size <= 0) throw new Exception(string.Format("Remote file size invalid, size: {0}.", newRemoteFileInfo.Size));
-                    // 整个文件只有一个片段
-                    segments.Add(new LocalSegment
+                    if (newRemoteFileInfo.IsAcceptRange)// 如果文件支持分段下载
                     {
-                        StartPosition = 0,
-                        EndPosition = newRemoteFileInfo.Size - 1
-                    });
-                    // 设置最大线程数为1
-                    this._maxThreadCount = 1;
-                }// else
-            }// if
-
-            // 创建LocalFileWriter
-            this._writer = new LocalFileWriter(this._localFileCache.SavePath, segments);
-            this._writer.CreateFile();
-
-            // 创建下载线程
-            this._threads = new List<SegmentThread>();
-            for (int i = 0; i < this._maxThreadCount; i++)
-            {
-                var thread = new SegmentThread(i + 1, this._writer, this._sourceProvider);
-                thread.Exited += Thread_Exited;
-                this._threads.Add(thread);
-            }
-
-            // 启动下载线程
-            foreach (var thread in this._threads)
-            {
-                thread.Start();
-            }
-        }
-
-        private void Thread_Exited(object sender, ThreadExitedArgs e)
-        {
-            switch (e.Status)
-            {
-                case SegmentThreadStatuses.Idle:// 正常退出，说明这个线程已经完成了所有任务，并且没有新的任务了
-                    {
-                        if (this._writer.IsCompleted())
+                        var calculateSegments = this._segmentCalculator.GetSegments(this._maxThreadCount, newRemoteFileInfo);
+                        foreach (var calculateSegment in calculateSegments)
                         {
-                            this._writer.Dispose();
-                            this.OnCompleted();
+                            segments.Add(new LocalSegment
+                            {
+                                StartPosition = calculateSegment.StartPosition,
+                                EndPosition = calculateSegment.EndPosition
+                            });
                         }
                     }
-                    break;
-                case SegmentThreadStatuses.Running:// 在Thread_Exited方法中Status不可能为这个值，直接忽略
-                    break;
-                case SegmentThreadStatuses.Paused:// 线程被暂停了
-                    break;
-                case SegmentThreadStatuses.Failed:// 线程下载失败
-                    break;
-                default:
-                    break;
-            }
+                    else// 如果文件不支持分段下载
+                    {
+                        if (newRemoteFileInfo.Size <= 0) throw new Exception(string.Format("Remote file size invalid, size: {0}.", newRemoteFileInfo.Size));
+                        // 整个文件只有一个片段
+                        segments.Add(new LocalSegment
+                        {
+                            StartPosition = 0,
+                            EndPosition = newRemoteFileInfo.Size - 1
+                        });
+                        // 设置最大线程数为1
+                        this._maxThreadCount = 1;
+                    }// else
+                }// if
+
+                // 创建LocalFileWriter
+                this._writer = new LocalFileWriter(this._tmpPath, segments);
+                this._writer.CreateFile();
+
+                // 缓存文件配置
+                this.CacheConfig();
+
+                // 创建下载线程
+                this._threads = new List<SegmentThread>();
+                for (int i = 0; i < this._maxThreadCount; i++)
+                {
+                    var thread = new SegmentThread(i + 1, this._writer, this._sourceProvider, workID);
+                    thread.Completed += Thread_Completed;
+                    thread.Failed += Thread_Failed;
+                    this._threads.Add(thread);
+                }
+
+                // 启动下载线程
+                foreach (var thread in this._threads)
+                {
+                    thread.Start();
+                }
+            }// lock
         }
 
         /// <summary>
@@ -295,22 +349,22 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         public void Pause()
         {
-            // 停止下载线程
-            foreach (var thread in this._threads)
+            lock (this._syncRoot)
             {
-                thread.Pause();
-            }
-            // 清空下载线程
-            this._threads.Clear();
-            // 缓存RemoteFileInfo
-            this._localFileCache.RemoteInfo = this._sourceProvider.GetRemoteFileInfo();
-            // 清空SourceProvider
-            this._sourceProvider = null;
-            // 缓存当前Writer信息，用来之后作为继续下载的依据
-            this._localFileCache.Segments = this._writer.GetSegments();
-            // 释放Writer
-            this._writer.Dispose();
-            this._writer = null;
+                if (this._status != DownloaderStatuses.Downloading) return;
+
+                this._status = DownloaderStatuses.Paused;
+                // 刷新WorkID
+                this.FreshWorkID();
+                this.ClearThread();
+                // 缓存配置文件
+                this.CacheConfig();
+                // 清空SourceProvider
+                this._sourceProvider = null;
+                // 释放Writer
+                this._writer.Dispose();
+                this._writer = null;
+            }// lock
         }
 
         /// <summary>
@@ -318,14 +372,121 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         public void Cancel()
         {
-            this.Pause();
-            // 删除本地文件
-            File.Delete(this._localFileCache.SavePath);
-            // 删除配置文件
+            lock (this._syncRoot)
+            {
+                if (this._status == DownloaderStatuses.Completed) return; // 如果已经下载完成则Cancel无效
+
+                if (this._status == DownloaderStatuses.Downloading)
+                {
+                    // 刷新WorkID
+                    this.FreshWorkID();
+                    this.ClearThread();
+                    // 清空SourceProvider
+                    this._sourceProvider = null;
+                    // 释放Writer
+                    this._writer.Dispose();
+                    this._writer = null;
+                }// if
+
+                this._status = DownloaderStatuses.Cancelled;
+                // 删除临时文件
+                if (File.Exists(this._tmpPath)) File.Delete(this._tmpPath);
+                // 删除配置文件
+                if (File.Exists(this._configPath)) File.Delete(this._configPath);
+            }// lock
         }
         #endregion
 
         #region private methdos
+
+        private void Thread_Failed(object sender, ThreadExitedArgs e)
+        {
+            bool isRaiseFailed = false;
+            lock (this._syncRoot)
+            {
+                if (e.WorkID != this._workID) return;// 这次操作已经过期
+                if (this._status != DownloaderStatuses.Downloading) return;// 只有Downloading状态才可能变为Failed状态
+                if (this.HasThreadRunning()) return; // 还有线程在运行，最终是否失败还不确定
+                if (this._writer.IsCompleted()) return;// 文件下载完成，证明最终下载是成功的
+
+                this._status = DownloaderStatuses.Failed;
+                this.ClearThread();
+                this.CacheConfig();// 保存文件配置以便以后继续下载
+                this._sourceProvider = null;
+                this._writer.Dispose();
+                this._writer = null;
+
+                isRaiseFailed = true;
+            }// lock
+
+            if (isRaiseFailed) this.OnFailed();
+        }
+
+        private void Thread_Completed(object sender, ThreadExitedArgs e)
+        {
+            bool isRaiseCompleted = false;
+            lock (this._syncRoot)
+            {
+                if (e.WorkID != this._workID) return;// 这次操作已经过期
+                if (this._status != DownloaderStatuses.Downloading) return;// 只有Downloading状态才可能变为Failed状态
+                if (!this._writer.IsCompleted()) return;// 文件下载还没有完成
+
+                this._status = DownloaderStatuses.Completed;
+                this.ClearThread();
+                this._sourceProvider = null;
+                this._writer.Dispose();
+                this._writer = null;
+
+                if (File.Exists(this._savePath)) File.Delete(this._savePath);
+                File.Move(this._tmpPath, this._savePath);
+                if (File.Exists(this._configPath)) File.Delete(this._configPath);
+
+                isRaiseCompleted = true;
+            }// lock
+
+            if (isRaiseCompleted) this.OnCompleted();
+        }
+
+        private bool HasThreadRunning()
+        {
+            foreach (var thread in this._threads)
+            {
+                if (thread.Status == SegmentThreadStatuses.Running) return true;
+            }
+
+            return false;
+        }
+
+        private void ClearThread()
+        {
+            foreach (var thread in this._threads)
+            {
+                thread.Pause();
+            }
+
+            this._threads.Clear();
+        }
+
+        private void CacheConfig()
+        {
+            this._config.RemoteInfo = this._sourceProvider.GetRemoteFileInfo();
+            this._config.Segments = this._writer.GetSegments();
+            this._config.Save(this._configPath);
+        }
+
+        private long FreshWorkID()
+        {
+            if (this._workID == long.MaxValue)
+            {
+                this._workID = EmptyWorkID + 1;
+            }
+            else
+            {
+                this._workID++;
+            }
+
+            return this._workID;
+        }
         #endregion
     }
 }

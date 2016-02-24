@@ -13,22 +13,22 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region constructors
-        public ThreadExitedArgs(SegmentThreadStatuses status)
+        public ThreadExitedArgs(long workID)
         {
-            this._status = status;
+            this._workID = workID;
         }
         #endregion
 
         #region properties
-        #region Status
-        private SegmentThreadStatuses _status;
+        #region WorkID
+        private long _workID;
         /// <summary>
-        /// Get or set <see cref="Status"/>
+        /// Get or set <see cref="WorkID"/>
         /// </summary>
-        public SegmentThreadStatuses Status
+        public long WorkID
         {
-            get { return this._status; }
-            set { this._status = value; }
+            get { return this._workID; }
+            set { this._workID = value; }
         }
         #endregion
         #endregion
