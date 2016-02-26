@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace WPFPrototype.Commons.Downloads
 {
@@ -33,10 +34,22 @@ namespace WPFPrototype.Commons.Downloads
         /// 本地文件写入流
         /// </summary>
         private FileStream _stream;
+        /// <summary>
+        /// 频繁写入数据到硬盘效率很低，这里使用缓存暂时保存文件数据
+        /// </summary>
+        private byte[] _cache;
+        /// <summary>
+        /// 缓存写入指针位置
+        /// </summary>
+        private long _cachePosition;
+        /// <summary>
+        /// 缓存标签
+        /// </summary>
+        private List<CacheHeader> _cacheMarkers;
         #endregion
 
         #region constructors
-        public LocalFileWriter(string savePath, List<LocalSegment> localSegments)
+        public LocalFileWriter(string savePath, List<LocalSegment> localSegments, int cacheSize)
         {
             if (string.IsNullOrEmpty(savePath)) throw new Exception("savePath can not be empty.");
             if (localSegments == null) throw new ArgumentNullException("localSegments");
@@ -58,11 +71,17 @@ namespace WPFPrototype.Commons.Downloads
                     }
                 });
             }// foreach
+            // 初始化缓存
+            this._cache = new byte[cacheSize];
+            this._cacheMarkers = new List<CacheHeader>();
         }
         #endregion
 
         #region properties
 
+        #endregion
+
+        #region events
         #endregion
 
         #region public methods
@@ -91,6 +110,25 @@ namespace WPFPrototype.Commons.Downloads
             }
 
             return localSegments;
+        }
+
+        /// <summary>
+        /// 获取当前已经下载的
+        /// </summary>
+        /// <returns></returns>
+        public long GetDownloadedSize()
+        {
+            long downloadedSize = 0;
+
+            lock (this._syncRoot)
+            {
+                foreach (var segment in this._segments)
+                {
+                    downloadedSize += segment.Segment.Position;
+                }
+            }
+
+            return downloadedSize;
         }
 
         /// <summary>
@@ -235,6 +273,21 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region private methods
+        private bool Cache(long filePosition, byte[] buffer, int bufferOffset, int length)
+        {
+            if (this._cache.LongLength < length + this._cachePosition) return false; // 缓存已经装不下了，返回失败
+
+            
+            // 插入新的数据标签
+            int insertIndex = 0;
+            for (int i = 0; i < this._cacheMarkers.Count; i++)
+            {
+
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// 通过ThreadID获取ThreadSegment
         /// </summary>
@@ -279,7 +332,7 @@ namespace WPFPrototype.Commons.Downloads
                 remainingLength = this._segments[i].RemainingLength;
                 if (maxSegmentIndex == -1)
                 {
-                    if (remainingLength > 1024)
+                    if (remainingLength > 1024 * 1024)
                     {
                         maxSegmentIndex = i;
                         maxRemainingLength = remainingLength;

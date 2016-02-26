@@ -43,11 +43,15 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Downloads\BufferHeader.cs" />
     <Compile Include="Downloads\CalculatedSegment.cs" />
     <Compile Include="Downloads\Downloader.cs" />
     <Compile Include="Downloads\DownloaderStatuses.cs" />
     <Compile Include="Downloads\DownloadHelper.cs" />
+    <Compile Include="Downloads\DownloadProgressArgs.cs" />
+    <Compile Include="Downloads\FileCache.cs" />
     <Compile Include="Downloads\FileSource.cs" />
+    <Compile Include="Downloads\CacheHeader.cs" />
     <Compile Include="Downloads\HttpProtocalProvider.cs" />
     <Compile Include="Downloads\HttpStream.cs" />
     <Compile Include="Downloads\IMirrorSelector.cs" />

@@ -9,6 +9,40 @@
         Height="300" 
         Width="300">
     <Grid>
-        <Button Click="Download_Click">Download</Button>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal">
+            <Button Click="Download_Click">Download</Button>
+            <Button Click="Pause_Click" Margin="10,0,0,0">Pause</Button>
+            <Button Click="Start_Click" Margin="10,0,0,0">Start</Button>
+            <Button Click="Cancel_Click" Margin="10,0,0,0">Cancel</Button>
+        </StackPanel>
+        <ProgressBar x:Name="Progress" Grid.Row="1" Height="20" Margin="0,20,0,0"/>
+        <TextBlock x:Name="Speed" Grid.Row="2" Margin="0,5,0,0"/>
+        <ItemsControl Grid.Row="3" x:Name="Segments" Margin="0,20,0,0">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <ProgressBar Height="12" VerticalAlignment="Center"
+                                     Value="{Binding Progress}"/>
+                        <TextBlock Margin="20,0" VerticalAlignment="Center"
+                                   FontSize="10">
+                            <Run Text="{Binding StartPosition}"/>
+                            <Run Text="-"/>
+                            <Run Text="{Binding EndPosition}"/>
+                            <Run/>
+                            <Run/>
+                            <Run Text="{Binding Position}"/>
+                            <Run Text="/"/>
+                            <Run Text="{Binding Length}"/>
+                        </TextBlock>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </Window>

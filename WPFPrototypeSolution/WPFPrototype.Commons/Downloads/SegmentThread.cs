@@ -256,7 +256,7 @@ namespace WPFPrototype.Commons.Downloads
                 bool isRaiseCompleted = false;
                 bool isRaiseFailed = false;
                 // 取消注册片段
-                lock(this._syncRoot)
+                lock (this._syncRoot)
                 {
                     if (!ct.IsCancellationRequested)
                     {
@@ -299,10 +299,10 @@ namespace WPFPrototype.Commons.Downloads
                         {
                             ct.ThrowIfCancellationRequested(); // 检测是否取消下载
 
-                            readLength = await downloadStream.ReadAsync(buffer, 0, buffer.Length, ct); // 下载数据
+                            readLength = downloadStream.Read(buffer, 0, buffer.Length); // 下载数据
                             if (readLength == 0) throw new Exception("Read network data failed."); // 读取数据失败
 
-                            lock(this._syncRoot)
+                            lock (this._syncRoot)
                             {
                                 ct.ThrowIfCancellationRequested();
                                 try

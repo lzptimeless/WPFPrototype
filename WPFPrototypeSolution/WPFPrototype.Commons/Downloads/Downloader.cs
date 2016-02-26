@@ -28,6 +28,10 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         public const long EmptyWorkID = 0;
         /// <summary>
+        /// 下载进度计时器间隔，毫秒
+        /// </summary>
+        public const long ProgressTimerInterval = 500;
+        /// <summary>
         /// 用于lock操作
         /// </summary>
         private readonly object _syncRoot = new object();
@@ -71,6 +75,18 @@ namespace WPFPrototype.Commons.Downloads
         /// 工作ID，用来在多线程中检测当前操作是否已经过期
         /// </summary>
         private long _workID;
+        /// <summary>
+        /// 获取下载进度的Timer
+        /// </summary>
+        private Timer _progressTimer;
+        /// <summary>
+        /// 最后一次下载进度改变时间戳
+        /// </summary>
+        private DateTime _lastProgressChangeTime;
+        /// <summary>
+        /// 最后一次下载进度改变时已经下载的字节
+        /// </summary>
+        private long _lastDownloadedSize;
         #endregion
 
         #region constructors
@@ -106,6 +122,7 @@ namespace WPFPrototype.Commons.Downloads
             this._configPath = configPath;
             this._savePath = DownloadHelper.GetFilePathFromConfigPath(configPath);
             this._tmpPath = DownloadHelper.GetTmpPathFromFilePath(this._savePath);
+            this._status = DownloaderStatuses.Idle;
         }
 
         /// <summary>
@@ -174,6 +191,7 @@ namespace WPFPrototype.Commons.Downloads
             this._savePath = savePath;
             this._configPath = DownloadHelper.GetConfigPathFromFilePath(savePath);
             this._tmpPath = DownloadHelper.GetTmpPathFromFilePath(savePath);
+            this._status = DownloaderStatuses.Idle;
         }
         #endregion
 
@@ -242,6 +260,110 @@ namespace WPFPrototype.Commons.Downloads
             WeakEventManager<Downloader, EventArgs>.RemoveHandler(this, FailedEventName, handler);
         }
         #endregion
+
+        #region Cancelled
+        /// <summary>
+        /// Event name of <see cref="Cancelled"/>
+        /// </summary>
+        public const string CancelledEventName = "Cancelled";
+
+        public event EventHandler<EventArgs> Cancelled;
+
+        private void OnCancelled()
+        {
+            EventHandler<EventArgs> handler = this.Cancelled;
+
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public void AddWeakCancelledHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.AddHandler(this, CancelledEventName, handler);
+        }
+
+        public void RemoveWeakCancelledHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.RemoveHandler(this, CancelledEventName, handler);
+        }
+        #endregion
+
+        #region Paused
+        /// <summary>
+        /// Event name of <see cref="Paused"/>
+        /// </summary>
+        public const string PausedEventName = "Paused";
+
+        public event EventHandler<EventArgs> Paused;
+
+        private void OnPaused()
+        {
+            EventHandler<EventArgs> handler = this.Paused;
+
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public void AddWeakPausedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.AddHandler(this, PausedEventName, handler);
+        }
+
+        public void RemoveWeakPausedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.RemoveHandler(this, PausedEventName, handler);
+        }
+        #endregion
+
+        #region Started
+        /// <summary>
+        /// Event name of <see cref="Started"/>
+        /// </summary>
+        public const string StartedEventName = "Started";
+
+        public event EventHandler<EventArgs> Started;
+
+        private void OnStarted()
+        {
+            EventHandler<EventArgs> handler = this.Started;
+
+            if (handler != null) handler(this, EventArgs.Empty);
+        }
+
+        public void AddWeakStartedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.AddHandler(this, StartedEventName, handler);
+        }
+
+        public void RemoveWeakStartedHandler(EventHandler<EventArgs> handler)
+        {
+            WeakEventManager<Downloader, EventArgs>.RemoveHandler(this, StartedEventName, handler);
+        }
+        #endregion
+
+        #region ProgressChanged
+        /// <summary>
+        /// Event name of <see cref="ProgressChanged"/>
+        /// </summary>
+        public const string ProgressChangedEventName = "ProgressChanged";
+
+        public event EventHandler<DownloadProgressArgs> ProgressChanged;
+
+        private void OnProgressChanged(DownloadProgressArgs e)
+        {
+            EventHandler<DownloadProgressArgs> handler = this.ProgressChanged;
+
+            if (handler != null) handler(this, e);
+        }
+
+        public void AddWeakProgressChangedHandler(EventHandler<DownloadProgressArgs> handler)
+        {
+            WeakEventManager<Downloader, DownloadProgressArgs>.AddHandler(this, ProgressChangedEventName, handler);
+        }
+
+        public void RemoveWeakProgressChangedHandler(EventHandler<DownloadProgressArgs> handler)
+        {
+            WeakEventManager<Downloader, DownloadProgressArgs>.RemoveHandler(this, ProgressChangedEventName, handler);
+        }
+        #endregion
         #endregion
 
         #region public methods
@@ -260,7 +382,7 @@ namespace WPFPrototype.Commons.Downloads
                 this._status = DownloaderStatuses.Downloading; // 设置Downloader状态
 
                 // 生成新的workID
-                workID = this.FreshWorkID();
+                workID = this.RefreshWorkID();
 
                 // 重置SourceProvider
                 var protocalProvider = new HttpProtocalProvider();
@@ -320,7 +442,7 @@ namespace WPFPrototype.Commons.Downloads
                 }// if
 
                 // 创建LocalFileWriter
-                this._writer = new LocalFileWriter(this._tmpPath, segments);
+                this._writer = new LocalFileWriter(this._tmpPath, segments, 1024 * 1024);
                 this._writer.CreateFile();
 
                 // 缓存文件配置
@@ -341,7 +463,13 @@ namespace WPFPrototype.Commons.Downloads
                 {
                     thread.Start();
                 }
+
+                this._lastProgressChangeTime = DateTime.Now;
+                this._lastDownloadedSize = this._writer.GetDownloadedSize();
+                this._progressTimer = new Timer(ProgressTimer_Callback, workID, ProgressTimerInterval, Timeout.Infinite);
             }// lock
+
+            this.OnStarted();
         }
 
         /// <summary>
@@ -355,7 +483,9 @@ namespace WPFPrototype.Commons.Downloads
 
                 this._status = DownloaderStatuses.Paused;
                 // 刷新WorkID
-                this.FreshWorkID();
+                this.RefreshWorkID();
+                this._progressTimer.Dispose();
+                this._progressTimer = null;
                 this.ClearThread();
                 // 缓存配置文件
                 this.CacheConfig();
@@ -365,6 +495,8 @@ namespace WPFPrototype.Commons.Downloads
                 this._writer.Dispose();
                 this._writer = null;
             }// lock
+
+            this.OnPaused();
         }
 
         /// <summary>
@@ -375,11 +507,14 @@ namespace WPFPrototype.Commons.Downloads
             lock (this._syncRoot)
             {
                 if (this._status == DownloaderStatuses.Completed) return; // 如果已经下载完成则Cancel无效
+                if (this._status == DownloaderStatuses.Cancelled) return; // 如果已经取消了，则不能重复操作
 
                 if (this._status == DownloaderStatuses.Downloading)
                 {
                     // 刷新WorkID
-                    this.FreshWorkID();
+                    this.RefreshWorkID();
+                    this._progressTimer.Dispose();
+                    this._progressTimer = null;
                     this.ClearThread();
                     // 清空SourceProvider
                     this._sourceProvider = null;
@@ -394,10 +529,40 @@ namespace WPFPrototype.Commons.Downloads
                 // 删除配置文件
                 if (File.Exists(this._configPath)) File.Delete(this._configPath);
             }// lock
+
+            this.OnCancelled();
         }
         #endregion
 
         #region private methdos
+        private void ProgressTimer_Callback(object state)
+        {
+            long workID = (long)state;
+            DownloadProgressArgs args;
+            // 获取下载状态
+            lock (this._syncRoot)
+            {
+                if (workID != this._workID) return;// 这次下载已经过期
+
+                var segments = this._writer.GetSegments();
+                args = new DownloadProgressArgs(segments);
+                var now = DateTime.Now;
+                args.Speed = (args.DownloadedSize - this._lastDownloadedSize) / Math.Max(1, (long)(now - this._lastProgressChangeTime).TotalSeconds);
+                this._lastProgressChangeTime = now;
+                this._lastDownloadedSize = args.DownloadedSize;
+            }// lock
+
+            // 触发进度改变事件
+            this.OnProgressChanged(args);
+
+            // 启动下一次进度计时
+            lock (this._syncRoot)
+            {
+                if (workID != this._workID) return;// 这次下载已经过期
+
+                this._progressTimer.Change(ProgressTimerInterval, Timeout.Infinite);
+            }
+        }
 
         private void Thread_Failed(object sender, ThreadExitedArgs e)
         {
@@ -406,10 +571,11 @@ namespace WPFPrototype.Commons.Downloads
             {
                 if (e.WorkID != this._workID) return;// 这次操作已经过期
                 if (this._status != DownloaderStatuses.Downloading) return;// 只有Downloading状态才可能变为Failed状态
-                if (this.HasThreadRunning()) return; // 还有线程在运行，最终是否失败还不确定
-                if (this._writer.IsCompleted()) return;// 文件下载完成，证明最终下载是成功的
 
+                this.RefreshWorkID();
                 this._status = DownloaderStatuses.Failed;
+                this._progressTimer.Dispose();
+                this._progressTimer = null;
                 this.ClearThread();
                 this.CacheConfig();// 保存文件配置以便以后继续下载
                 this._sourceProvider = null;
@@ -431,7 +597,10 @@ namespace WPFPrototype.Commons.Downloads
                 if (this._status != DownloaderStatuses.Downloading) return;// 只有Downloading状态才可能变为Failed状态
                 if (!this._writer.IsCompleted()) return;// 文件下载还没有完成
 
+                this.RefreshWorkID();
                 this._status = DownloaderStatuses.Completed;
+                this._progressTimer.Dispose();
+                this._progressTimer = null;
                 this.ClearThread();
                 this._sourceProvider = null;
                 this._writer.Dispose();
@@ -447,21 +616,13 @@ namespace WPFPrototype.Commons.Downloads
             if (isRaiseCompleted) this.OnCompleted();
         }
 
-        private bool HasThreadRunning()
-        {
-            foreach (var thread in this._threads)
-            {
-                if (thread.Status == SegmentThreadStatuses.Running) return true;
-            }
-
-            return false;
-        }
-
         private void ClearThread()
         {
             foreach (var thread in this._threads)
             {
                 thread.Pause();
+                thread.Completed -= Thread_Completed;
+                thread.Failed -= Thread_Failed;
             }
 
             this._threads.Clear();
@@ -474,7 +635,7 @@ namespace WPFPrototype.Commons.Downloads
             this._config.Save(this._configPath);
         }
 
-        private long FreshWorkID()
+        private long RefreshWorkID()
         {
             if (this._workID == long.MaxValue)
             {
