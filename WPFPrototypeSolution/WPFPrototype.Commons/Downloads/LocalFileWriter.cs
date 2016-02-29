@@ -35,17 +35,9 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         private FileStream _stream;
         /// <summary>
-        /// 频繁写入数据到硬盘效率很低，这里使用缓存暂时保存文件数据
+        /// 数据缓存，由于写入请求很分散很多，直接写入到文件效率很低，所以使用缓存
         /// </summary>
-        private byte[] _cache;
-        /// <summary>
-        /// 缓存写入指针位置
-        /// </summary>
-        private long _cachePosition;
-        /// <summary>
-        /// 缓存标签
-        /// </summary>
-        private List<CacheHeader> _cacheMarkers;
+        private FileCache _cache;
         #endregion
 
         #region constructors
@@ -71,9 +63,8 @@ namespace WPFPrototype.Commons.Downloads
                     }
                 });
             }// foreach
-            // 初始化缓存
-            this._cache = new byte[cacheSize];
-            this._cacheMarkers = new List<CacheHeader>();
+
+            this._cache = new FileCache(cacheSize);
         }
         #endregion
 
@@ -245,13 +236,16 @@ namespace WPFPrototype.Commons.Downloads
                 var innerSegment = threadSegment.Segment;
                 long offset = innerSegment.StartPosition + innerSegment.Position; // 计算真实写入offset
                 int writeLength = (int)Math.Min(length, threadSegment.RemainingLength); // 计算写入长度
-                if (this._stream.Position != offset)
+                bool cacheSuccess = this._cache.Cache(offset, buffer, bufferOffset, writeLength);
+
+                if (!cacheSuccess)
                 {
-                    // 设置写入位置
-                    this._stream.Seek(offset, SeekOrigin.Begin);
+                    this._cache.Flush(this.WriteToFile);
+                    cacheSuccess = this._cache.Cache(offset, buffer, bufferOffset, writeLength);
+
+                    if (!cacheSuccess) throw new Exception("Cache failed.");
                 }
-                // 写入数据到本地
-                this._stream.Write(buffer, bufferOffset, writeLength);
+                
                 innerSegment.Position += writeLength; // 更新写入位置
 
                 return threadSegment.RemainingLength;
@@ -273,19 +267,24 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region private methods
-        private bool Cache(long filePosition, byte[] buffer, int bufferOffset, int length)
+        /// <summary>
+        /// 写入数据到本地方法
+        /// </summary>
+        /// <param name="filePosition">数据对应文件的起始位置</param>
+        /// <param name="buffer">数据buffer</param>
+        /// <param name="bufferOffset">数据在buffer中的起始位置</param>
+        /// <param name="length">数据长度</param>
+        /// <returns></returns>
+        private void WriteToFile(long filePosition, byte[] buffer, int bufferOffset, int length)
         {
-            if (this._cache.LongLength < length + this._cachePosition) return false; // 缓存已经装不下了，返回失败
-
-            
-            // 插入新的数据标签
-            int insertIndex = 0;
-            for (int i = 0; i < this._cacheMarkers.Count; i++)
+            if (this._stream.Position != filePosition)
             {
-
+                // 设置写入位置
+                this._stream.Seek(filePosition, SeekOrigin.Begin);
             }
 
-            return true;
+            // 写入数据到本地
+            this._stream.Write(buffer, bufferOffset, length);
         }
 
         /// <summary>

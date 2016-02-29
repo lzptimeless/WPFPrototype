@@ -70,7 +70,7 @@ namespace WPFPrototype
             {
                 this.Progress.Value = e.Progress;
                 this.Speed.Text = string.Format("{0}KB/S", e.Speed / 1024);
-                this.Segments.ItemsSource = e.Segments.Select(p => new SegmentViewModel(p));
+               // this.Segments.ItemsSource = e.Segments.Select(p => new SegmentViewModel(p));
             }));
         }
 
