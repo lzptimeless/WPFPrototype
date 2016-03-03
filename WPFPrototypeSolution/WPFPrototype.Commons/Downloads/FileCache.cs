@@ -25,6 +25,10 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         private List<FileCacheBlock> _blocks;
         /// <summary>
+        /// 用来回收使用过的数据块
+        /// </summary>
+        private List<FileCacheBlock> _emptyBlocks;
+        /// <summary>
         /// 缓存数据块长度
         /// </summary>
         private int _blockLength;
@@ -36,6 +40,7 @@ namespace WPFPrototype.Commons.Downloads
             if (length < 0) throw new ArgumentException("length can not be less than 0.");
 
             this._blocks = new List<FileCacheBlock>();
+            this._emptyBlocks = new List<FileCacheBlock>();
             this._blockLength = Math.Min(length, Math.Max(MinBlockLength, length / 100)); // 默认分为一百个数据块
             this._totalLength = length;
         }
@@ -83,7 +88,7 @@ namespace WPFPrototype.Commons.Downloads
                         if (!this.CanCreateBlock()) return false; // 空间不足
 
                         var newBlock = this.CreateBlock(filePosition);
-                        int writeLength = (int)Math.Min(newBlock.RemainLength, length);
+                        int writeLength = Math.Min(newBlock.RemainLength, length);
                         newBlock.Write(buffer, bufferOffset, writeLength);
                         this._blocks.Add(newBlock);
 
@@ -112,11 +117,11 @@ namespace WPFPrototype.Commons.Downloads
 
                         return true;
                     }
-                    else if (filePosition <= (current.FilePosition + current.Position))// 数据起始点在当前数据块中或紧跟在当前数据块之后
+                    else if (filePosition <= (current.FilePosition + current.Length))// 数据起始点在当前数据块中或紧跟在当前数据块之后
                     {
-                        if (filePosition + length <= current.FilePosition + current.Position) return true; // 数据完全重复了
+                        if (filePosition + length <= current.FilePosition + current.Length) return true; // 数据完全重复了
                         // 去掉重复的部分
-                        int cachedLength = (int)(current.FilePosition + current.Position - filePosition); // 重复的数据长度
+                        int cachedLength = (int)(current.FilePosition + current.Length - filePosition); // 重复的数据长度
                         filePosition += cachedLength;
                         bufferOffset += cachedLength;
                         length -= cachedLength;
@@ -137,12 +142,12 @@ namespace WPFPrototype.Commons.Downloads
 
                         return true;
                     }
-                    else
+                    else// 数据起始点在当前数据块之后
                     {
                         continue;
                     }
                 }// for
-            }// block
+            }// lock
 
             return false;
         }
@@ -157,11 +162,16 @@ namespace WPFPrototype.Commons.Downloads
             {
                 foreach (var block in this._blocks)
                 {
-                    writeFunc(block.FilePosition, block.Buffer, 0, block.Position);
-                }
+                    writeFunc(block.FilePosition, block.Buffer, 0, block.Position);// 写入数据到本地
+
+                    if (block.TotalLength == this._blockLength)// 如果是最后一个创建的block，长度有可能比其他的小，这个block直接丢弃，方便一点
+                    {
+                        this._emptyBlocks.Add(block);// 回收这个数据块，方便以后使用
+                    }
+                }// foreach
 
                 this._blocks.Clear();
-            }
+            }// lock
         }
         #endregion
 
@@ -183,6 +193,15 @@ namespace WPFPrototype.Commons.Downloads
         {
             int currentTotalLength = this._blocks.Count * this._blockLength;
             if (currentTotalLength >= this._totalLength) throw new Exception("No space.");
+
+            // 如果有被回收的数据块则使用这些数据块
+            if (this._emptyBlocks.Count > 0)
+            {
+                var block = this._emptyBlocks[0];
+                block.Reset(filePosition);
+                this._emptyBlocks.RemoveAt(0);
+                return block;
+            }// if
 
             int blockLength = Math.Min(this._totalLength - currentTotalLength, this._blockLength);
             return new FileCacheBlock(filePosition, blockLength);

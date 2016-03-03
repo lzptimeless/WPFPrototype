@@ -236,16 +236,8 @@ namespace WPFPrototype.Commons.Downloads
                 var innerSegment = threadSegment.Segment;
                 long offset = innerSegment.StartPosition + innerSegment.Position; // 计算真实写入offset
                 int writeLength = (int)Math.Min(length, threadSegment.RemainingLength); // 计算写入长度
-                bool cacheSuccess = this._cache.Cache(offset, buffer, bufferOffset, writeLength);
+                this.Write(offset, buffer, bufferOffset, writeLength);// 写入数据
 
-                if (!cacheSuccess)
-                {
-                    this._cache.Flush(this.WriteToFile);
-                    cacheSuccess = this._cache.Cache(offset, buffer, bufferOffset, writeLength);
-
-                    if (!cacheSuccess) throw new Exception("Cache failed.");
-                }
-                
                 innerSegment.Position += writeLength; // 更新写入位置
 
                 return threadSegment.RemainingLength;
@@ -259,6 +251,7 @@ namespace WPFPrototype.Commons.Downloads
                 this._isDisposed = true;
                 if (this._stream != null)
                 {
+                    this.Flush();
                     this._stream.Dispose();
                     this._stream = null;
                 }
@@ -267,6 +260,14 @@ namespace WPFPrototype.Commons.Downloads
         #endregion
 
         #region private methods
+        /// <summary>
+        /// 把缓存中的数据全部写入到本地文件
+        /// </summary>
+        private void Flush()
+        {
+            this._cache.Flush(this.WriteToFile);
+        }
+
         /// <summary>
         /// 写入数据到本地方法
         /// </summary>
@@ -285,6 +286,34 @@ namespace WPFPrototype.Commons.Downloads
 
             // 写入数据到本地
             this._stream.Write(buffer, bufferOffset, length);
+        }
+
+        /// <summary>
+        /// 写入数据，优先写入缓存，如果缓存满了则清空缓存后再写入
+        /// </summary>
+        /// <param name="filePosition">数据对应文件的起始位置</param>
+        /// <param name="buffer">数据buffer</param>
+        /// <param name="bufferOffset">数据在buffer中的起始位置</param>
+        /// <param name="length">数据长度</param>
+        /// <returns></returns>
+        private void Write(long filePosition, byte[] buffer, int bufferOffset, int length)
+        {
+            if (this._cache.TotalLength > 0)// 如果cache可用
+            {
+                bool cacheSuccess = this._cache.Cache(filePosition, buffer, bufferOffset, length);// 优先使用缓存
+
+                if (!cacheSuccess)// 缓存失败可能是缓存满了
+                {
+                    this.Flush();// 清空缓存
+                    cacheSuccess = this._cache.Cache(filePosition, buffer, bufferOffset, length);// 再次缓存
+
+                    if (!cacheSuccess) throw new Exception("Cache failed.");// 再次缓存失败说明出了未知异常
+                }
+            }
+            else// cache不可用
+            {
+                this.WriteToFile(filePosition, buffer, bufferOffset, length);
+            }
         }
 
         /// <summary>

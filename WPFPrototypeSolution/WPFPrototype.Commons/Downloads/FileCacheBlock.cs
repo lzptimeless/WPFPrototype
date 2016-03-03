@@ -34,11 +34,11 @@ namespace WPFPrototype.Commons.Downloads
         }
         #endregion
 
-        #region Length
+        #region TotalLength
         /// <summary>
-        /// Get or set <see cref="Length"/>,自己缓存的长度
+        /// Get or set <see cref="TotalLength"/>,自己缓存的总长度
         /// </summary>
-        public int Length
+        public int TotalLength
         {
             get { return this._buffer.Length; }
         }
@@ -50,6 +50,16 @@ namespace WPFPrototype.Commons.Downloads
         /// Get or set <see cref="Position"/>,自己缓存的写入位置
         /// </summary>
         public int Position
+        {
+            get { return this._position; }
+        }
+        #endregion
+
+        #region Length
+        /// <summary>
+        /// Get or set <see cref="Length"/>，已经存有数据的长度
+        /// </summary>
+        public int Length
         {
             get { return this._position; }
         }
@@ -89,10 +99,20 @@ namespace WPFPrototype.Commons.Downloads
             if (buffer == null) throw new ArgumentNullException("buffer");
             if (bufferOffset < 0) throw new ArgumentException("bufferOffset is can not less than 0.");
             if (length <= 0) throw new ArgumentException("length is can not less or equal than 0.");
-            if (this.RemainLength < length) throw new Exception("Not enough space.");
+            if (this._buffer.Length - this._position < length) throw new Exception("Not enough space.");
 
             System.Buffer.BlockCopy(buffer, bufferOffset, this._buffer, this._position, length);
             this._position += length;
+        }
+
+        /// <summary>
+        /// 重置这个数据块
+        /// </summary>
+        /// <param name="filePosition">新的文件起始位置</param>
+        public void Reset(long filePosition)
+        {
+            this._filePosition = filePosition;
+            this._position = 0;
         }
         #endregion
 

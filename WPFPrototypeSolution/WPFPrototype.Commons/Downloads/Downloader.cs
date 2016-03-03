@@ -24,6 +24,10 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         public const int DefaultThreadCount = 4;
         /// <summary>
+        /// 空缓存的长度
+        /// </summary>
+        public const int EmptyCacheLength = 0;
+        /// <summary>
         /// 空的WorkID
         /// </summary>
         public const long EmptyWorkID = 0;
@@ -72,6 +76,10 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         private string _configPath;
         /// <summary>
+        /// 缓存长度
+        /// </summary>
+        private int _cacheLength;
+        /// <summary>
         /// 工作ID，用来在多线程中检测当前操作是否已经过期
         /// </summary>
         private long _workID;
@@ -94,8 +102,9 @@ namespace WPFPrototype.Commons.Downloads
         /// 创建<see cref="Downloader"/>
         /// </summary>
         /// <param name="configPath">本地文件</param>
-        public Downloader(string configPath)
-            : this(configPath, DefaultThreadCount)
+        /// <param name="cacheLength">缓存大小，缓存可减少硬盘写入压力，不使用缓存可设置为<see cref="Downloader.EmptyCacheLength"/></param>
+        public Downloader(string configPath, int cacheLength)
+            : this(configPath, DefaultThreadCount, cacheLength)
         {
         }
 
@@ -104,7 +113,8 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         /// <param name="configPath">本地文件</param>
         /// <param name="threadCount">下载线程数</param>
-        public Downloader(string configPath, int threadCount)
+        /// <param name="cacheLength">缓存大小，缓存可减少硬盘写入压力，不使用缓存可设置为<see cref="Downloader.EmptyCacheLength"/></param>
+        public Downloader(string configPath, int threadCount, int cacheLength)
         {
             if (string.IsNullOrEmpty(configPath)) throw new ArgumentException("configPath can not be null or empty.");
 
@@ -122,6 +132,7 @@ namespace WPFPrototype.Commons.Downloads
             this._configPath = configPath;
             this._savePath = DownloadHelper.GetFilePathFromConfigPath(configPath);
             this._tmpPath = DownloadHelper.GetTmpPathFromFilePath(this._savePath);
+            this._cacheLength = cacheLength;
             this._status = DownloaderStatuses.Idle;
         }
 
@@ -130,8 +141,9 @@ namespace WPFPrototype.Commons.Downloads
         /// </summary>
         /// <param name="url">下载地址</param>
         /// <param name="savePath">保存路径</param>
-        public Downloader(string url, string savePath)
-           : this(url, null, savePath, DefaultThreadCount)
+        /// <param name="cacheLength">缓存大小，缓存可减少硬盘写入压力，不使用缓存可设置为<see cref="Downloader.EmptyCacheLength"/></param>
+        public Downloader(string url, string savePath, int cacheLength)
+           : this(url, null, savePath, DefaultThreadCount, cacheLength)
         { }
 
         /// <summary>
@@ -140,8 +152,9 @@ namespace WPFPrototype.Commons.Downloads
         /// <param name="url">下载地址</param>
         /// <param name="savePath">保存路径</param>
         /// <param name="threadCount">下载线程数</param>
-        public Downloader(string url, string savePath, int threadCount)
-           : this(url, null, savePath, threadCount)
+        /// <param name="cacheLength">缓存大小，缓存可减少硬盘写入压力，不使用缓存可设置为<see cref="Downloader.EmptyCacheLength"/></param>
+        public Downloader(string url, string savePath, int threadCount, int cacheLength)
+           : this(url, null, savePath, threadCount, cacheLength)
         { }
 
         /// <summary>
@@ -150,8 +163,9 @@ namespace WPFPrototype.Commons.Downloads
         /// <param name="url">下载地址</param>
         /// <param name="mirrors">镜像地址</param>
         /// <param name="savePath">保存路径</param>
-        public Downloader(string url, IEnumerable<string> mirrors, string savePath)
-            : this(url, mirrors, savePath, DefaultThreadCount)
+        /// <param name="cacheLength">缓存大小，缓存可减少硬盘写入压力，不使用缓存可设置为<see cref="Downloader.EmptyCacheLength"/></param>
+        public Downloader(string url, IEnumerable<string> mirrors, string savePath, int cacheLength)
+            : this(url, mirrors, savePath, DefaultThreadCount, cacheLength)
         { }
 
         /// <summary>
@@ -161,7 +175,8 @@ namespace WPFPrototype.Commons.Downloads
         /// <param name="mirrors">镜像地址</param>
         /// <param name="savePath">保存路径</param>
         /// <param name="threadCount">下载线程数</param>
-        public Downloader(string url, IEnumerable<string> mirrors, string savePath, int threadCount)
+        /// <param name="cacheLength">缓存大小，缓存可减少硬盘写入压力，不使用缓存可设置为<see cref="Downloader.EmptyCacheLength"/></param>
+        public Downloader(string url, IEnumerable<string> mirrors, string savePath, int threadCount, int cacheLength)
         {
             if (string.IsNullOrEmpty(url)) throw new ArgumentException("url can not be null or empty.");
             if (string.IsNullOrEmpty(savePath)) throw new ArgumentException("savePath can not be null or empty.");
@@ -191,6 +206,7 @@ namespace WPFPrototype.Commons.Downloads
             this._savePath = savePath;
             this._configPath = DownloadHelper.GetConfigPathFromFilePath(savePath);
             this._tmpPath = DownloadHelper.GetTmpPathFromFilePath(savePath);
+            this._cacheLength = cacheLength;
             this._status = DownloaderStatuses.Idle;
         }
         #endregion
