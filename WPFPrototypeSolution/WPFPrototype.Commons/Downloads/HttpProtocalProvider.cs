@@ -109,10 +109,12 @@ namespace WPFPrototype.Commons.Downloads
                         remoteInfo.ModifyTime = contentHeaders.LastModified.Value.DateTime; // 文件修改时间
                     }
 
-                    if (contentHeaders.ContentMD5 != null && contentHeaders.ContentMD5.Length > 0)
+                    byte[] md5 = contentHeaders.ContentMD5;
+                    if (md5 != null && md5.Length > 0)
                     {
-                        remoteInfo.MD5 = Encoding.UTF8.GetString(contentHeaders.ContentMD5); // 文件MD5
+                        remoteInfo.MD5 = Convert.ToBase64String(md5); // 文件MD5
                     }
+
                     return remoteInfo;
                 }// using
             }// using

@@ -458,7 +458,7 @@ namespace WPFPrototype.Commons.Downloads
                 }// if
 
                 // 创建LocalFileWriter
-                this._writer = new LocalFileWriter(this._tmpPath, segments, 1024 * 1024);
+                this._writer = new LocalFileWriter(this._tmpPath, segments, this._cacheLength);
                 this._writer.CreateFile();
 
                 // 缓存文件配置

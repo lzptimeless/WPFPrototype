@@ -24,7 +24,7 @@ namespace WPFPrototype
     public partial class DownloadManagerWindow : Window
     {
         #region fields
-        private const string Url = "http://down.sandai.net/thunderspeed/ThunderSpeed1.0.33.358.exe";
+        private const string Url = "http://dlsw.baidu.com/sw-search-sp/soft/6c/23675/Photoshop_CS6.3510481888.7z";
         private string _savePath;
         private Downloader _downloader;
         private DateTime _startTime;
@@ -39,7 +39,7 @@ namespace WPFPrototype
         {
             _savePath = System.IO.Path.Combine(@"C:\Temporary\Other", DownloadHelper.GetFileNameFromUrl(Url));
 
-            this._downloader = new Downloader(Url, _savePath, 4, 0);
+            this._downloader = new Downloader(Url, _savePath, 4, 1024 * 1024 * 10);
             this._downloader.Completed += Downloader_Completed;
             this._downloader.ProgressChanged += Downloader_ProgressChanged;
             this._downloader.Paused += Downloader_Paused;

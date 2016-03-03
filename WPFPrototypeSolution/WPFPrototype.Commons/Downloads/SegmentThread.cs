@@ -283,7 +283,7 @@ namespace WPFPrototype.Commons.Downloads
         {
             long remainingLength = segment.EndPosition - segment.StartPosition + 1;// 当前片段剩余的长度
             long startPosition = segment.StartPosition;// 下载起始位置
-            byte[] buffer = new byte[512]; // 下载数据的buffer
+            byte[] buffer = new byte[1024 * 100]; // 下载数据的buffer
             int readLength = 0;// 当前从downloadStream读取的数据长度
             bool isWriteError = false; // 是否在写入本地时发生了异常
             while (true) // 如果出现了异常需要继续尝试
