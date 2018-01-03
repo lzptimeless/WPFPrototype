@@ -7,5 +7,5 @@
   <text key="head1">Head 1</text>
   <text key="head2">Head 2</text>
   <text key="head3">Head 3</text>
-  <text key="head4" ref="Head2">Head 4</text>
+  <text key="head4" ref="Head2"></text>
 </languages>

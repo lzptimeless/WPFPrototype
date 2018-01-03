@@ -110,7 +110,7 @@ namespace WPFPrototype.Toolkit.Languages
 
                     value = res[refKey.Key];
                     // 不能连续引用两次
-                    if (value is LanguageReference) throw new Exception(string.Format("Can not ref two times, [key:{0}].", key));
+                    if (value is LanguageReference) throw new Exception(string.Format("Can not use ref chain, [key:{0}].", key));
 
                     return value as string;
                 }
